@@ -6,6 +6,7 @@ Uso (a partir de ``backend/``)::
     python -m app.cli migrate [--dry-run]
     python -m app.cli seed
     python -m app.cli create-user --email admin@exemplo.pt --name "Admin" [--role admin]
+    python -m app.cli attachments-check # ficheiros órfãos e anexos sem ficheiro
 
 A password do ``create-user`` é pedida no terminal ou lida de ``VCCTF_NEW_USER_PASSWORD``
 (nunca como argumento, para não ficar no histórico da shell).
@@ -28,8 +29,10 @@ from app.core.config import Settings, get_settings
 from app.domain.permissions import Role
 from app.maintenance import indexes, migrations, seeds
 from app.repositories import mongo
+from app.repositories.attachments import AttachmentRepository
 from app.repositories.users import EmailAlreadyExistsError
 from app.services.users import UserService
+from app.storage.attachments import AttachmentStorage
 
 PASSWORD_ENV = "VCCTF_NEW_USER_PASSWORD"  # noqa: S105 (nome da variável, não o segredo)
 
@@ -101,6 +104,26 @@ def _seed(db: Database, settings: Settings, out: _Output) -> int:
     return 0
 
 
+def _attachments_check(db: Database, settings: Settings, out: _Output) -> int:
+    """Compara o disco com os metadados ativos; devolve 1 se houver inconsistências."""
+    on_disk = set(AttachmentStorage(settings.attachments_path).iter_keys())
+    expected = AttachmentRepository(db).active_storage_keys()
+    orphans = sorted(on_disk - expected)
+    missing = sorted(expected - on_disk)
+    out(
+        f"Anexos: {len(expected)} ativos, {len(on_disk)} ficheiro(s) em {settings.attachments_path}"
+    )
+    for key in orphans:
+        out(f"  órfão (sem metadados ativos): {key}")
+    for key in missing:
+        out(f"  em falta no disco: {key}")
+    if orphans or missing:
+        out(f"Inconsistências: {len(orphans)} órfão(s), {len(missing)} em falta.")
+        return 1
+    out("Sem inconsistências.")
+    return 0
+
+
 def _read_password() -> str:
     password = os.environ.get(PASSWORD_ENV)
     if password:
@@ -139,6 +162,9 @@ def build_parser() -> argparse.ArgumentParser:
     create_user.add_argument("--email", required=True)
     create_user.add_argument("--name", required=True)
     create_user.add_argument("--role", choices=[role.value for role in Role], default="admin")
+    commands.add_parser(
+        "attachments-check", help="Reporta ficheiros de anexos órfãos ou em falta no disco"
+    )
     return parser
 
 
@@ -166,6 +192,8 @@ def main(
             return _migrate(db, settings, out, dry_run=args.dry_run)
         if args.command == "create-user":
             return _create_user(db, args, out)
+        if args.command == "attachments-check":
+            return _attachments_check(db, settings, out)
         return _seed(db, settings, out)
     except (
         migrations.MigrationError,

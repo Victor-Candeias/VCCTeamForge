@@ -97,6 +97,7 @@ sudo deployment/scripts/deploy.sh
 | Logs da API | `journalctl -u VCCTeamForge-api -f` |
 | Readiness | `curl -s http://127.0.0.1:5000/api/health/ready` |
 | Estado da BD (migrations/índices) | `sudo vccteamforge-manage status` |
+| Anexos órfãos ou em falta no disco | `sudo vccteamforge-manage attachments-check` |
 | Logs do Nginx | `/var/log/nginx/vccteamforge.{access,error}.log` (com `rid=` igual ao `X-Request-ID`) |
 
 ## Notas de segurança

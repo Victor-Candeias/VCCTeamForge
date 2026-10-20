@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { BlockedBadge, IssueStatusBadge, IssueTypeBadge } from '@/features/issues/IssueBadges'
+import { IssueAttachments } from '@/features/issues/IssueAttachments'
 import { IssueComments } from '@/features/issues/IssueComments'
 import { IssueHistory } from '@/features/issues/IssueHistory'
 import { useIssue, useUpdateIssue } from '@/features/issues/useIssues'
@@ -238,6 +239,7 @@ export function IssueDetailPage() {
               </ul>
             </section>
           )}
+          <IssueAttachments issueId={data.id} />
           <IssueActivity issue={data} />
         </div>
         <dl className="grid h-fit grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">

@@ -77,6 +77,9 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - O detalhe tem os separadores "Comentários" (Markdown, edição pelo autor, remoção em dois
   passos, formulário só com `issues:comment`) e "Histórico" (alterações em texto legível;
   descrição/critérios só indicam que mudaram).
+- Secção "Anexos" no detalhe (`IssueAttachments`): download, miniatura de imagens
+  (`?inline=1`), upload com `issues:write` (limite de 20 MiB validado também no cliente) e
+  remoção em dois passos quando `canDelete`. `apiFetch` não define `Content-Type` para `FormData`.
 
 ## Auditoria
 

@@ -21,6 +21,7 @@
 
     {"collection": "issue_comments", "name": "issue_comments_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", 1]]},
     {"collection": "issue_history", "name": "issue_history_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", -1]]},
+    {"collection": "attachments", "name": "attachments_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", 1]]},
 
     {"collection": "sprints", "name": "sprints_projectId_status", "keys": [["projectId", 1], ["status", 1]]},
 

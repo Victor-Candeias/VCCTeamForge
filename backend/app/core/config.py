@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     database_dir: Path = DEFAULT_DATABASE_DIR
 
     attachments_path: Path = Path("var/attachments")
+    # Abaixo do client_max_body_size (25 MiB) do Nginx, para o erro vir da API.
+    attachments_max_bytes: int = Field(default=20 * 1024 * 1024, ge=1, le=25 * 1024 * 1024)
+    attachments_max_per_issue: int = Field(default=50, ge=1, le=1000)
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_format: Literal["text", "json"] = "text"

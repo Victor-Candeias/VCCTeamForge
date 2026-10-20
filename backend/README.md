@@ -58,6 +58,8 @@ Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais rea
 | `MONGODB_MAX_POOL_SIZE` | `20` | Por worker |
 | `DATABASE_DIR` | `<repo>/database` | Migrations, índices e seeds |
 | `ATTACHMENTS_PATH` | `var/attachments` | Absoluto em produção |
+| `ATTACHMENTS_MAX_BYTES` | `20971520` (20 MiB) | Por anexo; máximo 25 MiB (limite do Nginx) |
+| `ATTACHMENTS_MAX_PER_ISSUE` | `50` | Anexos ativos por issue |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `LOG_FORMAT` | `text` | `json` recomendado em produção |
 | `LOG_FILE` | — | Se definido, ficheiro com rotação (`LOG_MAX_BYTES`, `LOG_BACKUP_COUNT`) |
@@ -203,6 +205,31 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 - As mesmas ações são gravadas em `audit_logs` (`issue.created`, `issue.updated`,
   `comment.created/updated/deleted`). Falhas ao escrever histórico ou auditoria são registadas
   em log (com `requestId`) e não anulam a operação principal.
+
+### Anexos
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/issues/{id}/attachments` | `issues:read` + acesso | Metadados (sem caminho interno), mais antigos primeiro |
+| `POST /api/issues/{id}/attachments` | `issues:write` + acesso | `multipart/form-data`, campo `file` → 201; projeto arquivado → 422 |
+| `GET /api/attachments/{id}/content` | `issues:read` + acesso | `?inline=1` só tem efeito em imagens |
+| `DELETE /api/attachments/{id}` | quem carregou, Tech Lead do projeto ou admin | Remoção lógica + ficheiro apagado → 204 |
+
+- **Tipos aceites:** `png`, `jpg`, `jpeg`, `gif`, `webp`, `pdf`, `txt`, `log`, `md`, `csv`,
+  `json`, `zip`, `docx`, `xlsx`, `pptx`. O `Content-Type` guardado deriva da extensão (o enviado
+  pelo browser é ignorado); imagens, PDF e formatos ZIP são confirmados pelos *magic bytes* e
+  ficheiros de texto com bytes nulos são recusados (422 `field=file`).
+- **Limites:** acima de `ATTACHMENTS_MAX_BYTES` → 413 (verificado durante a leitura, sem
+  confiar no `Content-Length`); mais de `ATTACHMENTS_MAX_PER_ISSUE` → 422.
+- **Disco:** `<ATTACHMENTS_PATH>/<projectId>/<aaaa>/<mm>/<token hex 32>` (diretórios `0750`,
+  ficheiros `0640`), escrita num temporário com `os.replace` atómico; o nome original
+  (sem caminhos nem caracteres de controlo, ≤ 200) só existe nos metadados. Se a gravação dos
+  metadados falhar, o ficheiro é apagado.
+- **Download:** `Content-Disposition` com `filename*` (RFC 5987), `X-Content-Type-Options:
+  nosniff`, `Content-Security-Policy: sandbox` e `Cache-Control: private, no-store`.
+- Histórico `attachment_added`/`attachment_removed` e auditoria `attachment.created`/`attachment.deleted`.
+- `python -m app.cli attachments-check` reporta ficheiros órfãos e anexos ativos sem ficheiro
+  (código de saída 1 se houver inconsistências).
 
 Primeiro administrador (a password é pedida no terminal):
 

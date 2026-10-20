@@ -68,13 +68,13 @@ Anexos em issues guardados no disco local (`ATTACHMENTS_PATH`) com metadados na 
 
 | Action | File | Details |
 |--------|------|---------|
-| Modify | `frontend/src/services/apiClient.ts` | Não definir `Content-Type` para `FormData` |
+| Verify | `frontend/src/services/apiClient.ts` | Não definir `Content-Type` para `FormData` (já suportado) |
 | Create | `frontend/src/services/attachments.ts` | Cliente |
 | Create | `frontend/src/features/issues/IssueAttachments.tsx` | Lista, upload (validação de tamanho no cliente), download e remoção |
 | Modify | `frontend/src/features/issues/IssueDetailPage.tsx` | Secção Anexos |
-| Create | `frontend/src/features/issues/attachments.test.tsx` | Upload, erro de tamanho, remoção |
+| Modify | `frontend/src/features/issues/issues.test.tsx` | Upload, erro de tamanho, remoção (reutiliza as fixtures do detalhe) |
 
-- [ ] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
+- [x] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
 
 ## Impacted Files
 

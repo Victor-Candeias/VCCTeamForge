@@ -365,3 +365,103 @@ describe('auditoria', () => {
     expect(screen.queryByRole('link', { name: 'Auditoria' })).not.toBeInTheDocument()
   })
 })
+
+function testAttachment(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'a1',
+    issueId: 'i1',
+    originalName: 'relatório.pdf',
+    contentType: 'application/pdf',
+    size: 2048,
+    sha256: 'abc',
+    isImage: false,
+    uploadedBy: { id: 'tl1', name: 'Tiago', email: 'tiago@exemplo.pt', role: 'tech_lead' },
+    createdAt: '2026-01-03T10:00:00Z',
+    canDelete: true,
+    ...overrides,
+  }
+}
+
+describe('anexos', () => {
+  it('carrega, lista e remove anexos', async () => {
+    let attachments = [testAttachment()]
+    let uploaded: FormDataEntryValue | null = null
+    mockApi({
+      ...csrfHandler,
+      'GET /api/users/me': () => jsonResponse(techLeadUser),
+      'GET /api/issues/by-key/APP-1': () => jsonResponse(testIssue()),
+      [commentsKey]: () => jsonResponse(pageOf([], 1, 50)),
+      'GET /api/issues/i1/attachments': () => jsonResponse(attachments),
+      'POST /api/issues/i1/attachments': (init) => {
+        uploaded = (init.body as FormData).get('file')
+        const created = testAttachment({ id: 'a2', originalName: 'notas.txt', size: 5 })
+        attachments = [...attachments, created]
+        return jsonResponse(created, 201)
+      },
+      'DELETE /api/attachments/a1': () => {
+        attachments = attachments.filter((attachment) => attachment.id !== 'a1')
+        return new Response(null, { status: 204 })
+      },
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/issues/APP-1')
+
+    const link = await screen.findByRole('link', { name: 'relatório.pdf' })
+    expect(link).toHaveAttribute('href', '/api/attachments/a1/content')
+    expect(screen.getByText(/2,0 KB/)).toBeInTheDocument()
+
+    const file = new File(['olá!'], 'notas.txt', { type: 'text/plain' })
+    await user.upload(screen.getByLabelText('Adicionar anexo'), file)
+    expect(await screen.findByRole('link', { name: 'notas.txt' })).toBeInTheDocument()
+    expect(uploaded).toBeInstanceOf(File)
+    expect((uploaded as unknown as File).name).toBe('notas.txt')
+
+    await user.click(screen.getByRole('button', { name: 'Remover relatório.pdf' }))
+    await user.click(screen.getByRole('button', { name: 'Confirmar remoção' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'relatório.pdf' })).not.toBeInTheDocument(),
+    )
+  })
+
+  it('rejeita ficheiros demasiado grandes no cliente e mostra erros do servidor', async () => {
+    const fetchMock = mockApi({
+      ...csrfHandler,
+      'GET /api/users/me': () => jsonResponse(techLeadUser),
+      'GET /api/issues/by-key/APP-1': () => jsonResponse(testIssue()),
+      [commentsKey]: () => jsonResponse(pageOf([], 1, 50)),
+      'GET /api/issues/i1/attachments': () => jsonResponse([]),
+      'POST /api/issues/i1/attachments': () =>
+        jsonResponse(
+          { title: 'Regra', status: 422, detail: 'Tipo de ficheiro não permitido', field: 'file' },
+          422,
+        ),
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/issues/APP-1')
+
+    const input = await screen.findByLabelText('Adicionar anexo')
+    const big = new File(['x'], 'grande.pdf', { type: 'application/pdf' })
+    Object.defineProperty(big, 'size', { value: 21 * 1024 * 1024 })
+    await user.upload(input, big)
+    expect(await screen.findByText(/excede o máximo de 20,0 MB/)).toBeInTheDocument()
+    const posts = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')
+    expect(posts).toHaveLength(0)
+
+    await user.upload(input, new File(['x'], 'falso.pdf', { type: 'application/pdf' }))
+    expect(await screen.findByText('Tipo de ficheiro não permitido')).toBeInTheDocument()
+  })
+
+  it('esconde o upload sem issues:write', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(testUser),
+      'GET /api/issues/by-key/APP-1': () => jsonResponse(testIssue({ canEdit: false })),
+      [commentsKey]: () => jsonResponse(pageOf([], 1, 50)),
+      'GET /api/issues/i1/attachments': () => jsonResponse([testAttachment({ canDelete: false })]),
+    })
+    renderRoutes(routes, '/issues/APP-1')
+
+    expect(await screen.findByRole('link', { name: 'relatório.pdf' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Adicionar anexo')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Remover/ })).not.toBeInTheDocument()
+  })
+})

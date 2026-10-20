@@ -53,6 +53,11 @@ class BusinessRuleError(AppError):
     title = "Regra de negócio violada"
 
 
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    title = "Conteúdo demasiado grande"
+
+
 class TooManyRequestsError(AppError):
     status_code = 429
     title = "Demasiados pedidos"

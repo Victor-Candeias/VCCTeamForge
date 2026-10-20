@@ -9,6 +9,9 @@ from pymongo.errors import PyMongoError
 from app import __version__
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
+from app.core.errors import register_exception_handlers
+from app.core.logging import configure_logging
+from app.core.middleware import RequestContextMiddleware
 from app.repositories import mongo
 
 logger = logging.getLogger(__name__)
@@ -58,8 +61,16 @@ def create_app(
     )
     app.state.settings = settings
     app.state.mongo_client = mongo_client
+    register_exception_handlers(app)
+    app.add_middleware(RequestContextMiddleware)
     app.include_router(api_router, prefix="/api")
     return app
 
 
-app = create_app()
+def _build_app() -> FastAPI:
+    settings = get_settings()
+    configure_logging(settings)
+    return create_app(settings)
+
+
+app = _build_app()

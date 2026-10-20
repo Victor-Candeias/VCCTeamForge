@@ -57,9 +57,34 @@ Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais rea
 | `MONGODB_SERVER_SELECTION_TIMEOUT_MS` | `5000` | |
 | `MONGODB_MAX_POOL_SIZE` | `20` | Por worker |
 | `ATTACHMENTS_PATH` | `var/attachments` | Absoluto em produção |
+| `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| `LOG_FORMAT` | `text` | `json` recomendado em produção |
+| `LOG_FILE` | — | Se definido, ficheiro com rotação (`LOG_MAX_BYTES`, `LOG_BACKUP_COUNT`) |
+| `HEALTH_MIN_FREE_DISK_MB` | `1024` | Limiar de disco para readiness `degraded` |
 
 Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais MongoDB ou se
 `ATTACHMENTS_PATH` for relativo.
+
+## Logging, erros e health checks
+
+- **Logging** (`app/core/logging.py`): cada linha inclui o request id. Em produção, usar
+  `LOG_FORMAT=json` e o journald (`journalctl -u VCCTeamForge-api`). Com `LOG_FILE`, o ficheiro
+  roda por tamanho. O access log do Uvicorn está desativado; é o middleware que regista
+  método, caminho, estado e duração.
+- **Request id** (`app/core/middleware.py`): é aceite o `X-Request-ID` enviado pelo Nginx, se
+  for válido; caso contrário é gerado um novo. É devolvido no cabeçalho e no corpo dos erros.
+- **Erros** (`app/core/errors.py`): todas as respostas de erro usam RFC 7807
+  (`application/problem+json`) com `type`, `title`, `status`, `detail`, `instance` e
+  `requestId`. Os serviços lançam `AppError` e subclasses (`NotFoundError`, `ConflictError`,
+  `ForbiddenError`, ...). Erros de validação (422) incluem `errors` sem repetir os valores
+  recebidos. Exceções não tratadas devolvem 500 sem detalhes internos, e falhas de ligação
+  ao MongoDB devolvem 503.
+- **Health checks**:
+
+| Endpoint | Uso | Resposta |
+|---|---|---|
+| `GET /api/health`, `GET /api/health/live` | Processo vivo | Sempre 200 |
+| `GET /api/health/ready` | Dependências | 200 `ok`/`degraded`; 503 se o MongoDB falhar |
 
 ## MongoDB 4.4
 

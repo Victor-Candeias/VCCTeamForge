@@ -23,5 +23,5 @@ status: active
 | DEV-005 | Criar migrations/seeds e índices idempotentes | backlog | 2026-10-20 | developer | high |  |  | DEV-004 |  |
 | DEV-006 | Implementar login/logout, sessão e RBAC | backlog | 2026-10-20 | developer | critical |  |  | DEV-004, DEV-005 |  |
 | DEV-007 | Configurar Nginx e serviço systemd | backlog | 2026-10-20 | developer | medium |  |  | DEV-001, DEV-002 |  |
-| DEV-008 | Configurar logging, tratamento de erros e health checks | backlog | 2026-10-20 | developer | medium |  |  | DEV-001 |  |
+| DEV-008 | Configurar logging, tratamento de erros e health checks | done | 2026-10-20 | developer | medium | 2026-10-20 |  | DEV-001 | [DEV-008](../specs/fase-1-fundacao/dev-008-spec.md) |
 <!-- /maestru:work-items-list -->

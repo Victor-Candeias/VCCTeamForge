@@ -42,6 +42,14 @@ class Settings(BaseSettings):
 
     attachments_path: Path = Path("var/attachments")
 
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_format: Literal["text", "json"] = "text"
+    log_file: Path | None = None
+    log_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
+    log_backup_count: int = Field(default=5, ge=0, le=100)
+
+    health_min_free_disk_mb: int = Field(default=1024, ge=0)
+
     @model_validator(mode="after")
     def _apply_environment_rules(self) -> "Settings":
         if self.api_docs_enabled is None:

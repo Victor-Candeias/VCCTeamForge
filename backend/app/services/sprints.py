@@ -1,4 +1,4 @@
-"""Criação, listagem e edição de sprints (DEV-015)."""
+"""Criação, listagem e edição de sprints (DEV-015) e totais de planeamento (DEV-016)."""
 
 from collections.abc import Iterable
 from datetime import UTC, date, datetime, time
@@ -17,21 +17,23 @@ from app.domain.sprints import (
     default_end_date,
     duration_days,
     name_key,
+    validate_capacity,
     validate_dates,
 )
 from app.domain.users import User
 from app.repositories.audit import AuditLogRepository
+from app.repositories.issues import IssueRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.sprints import SprintNameExistsError, SprintRepository
 from app.schemas.common import PageParams
-from app.schemas.sprints import SprintCreate, SprintResponse, SprintUpdate
+from app.schemas.sprints import SprintCreate, SprintResponse, SprintScope, SprintUpdate
 from app.services.authorization import ensure_project_access
 from app.services.common import jsonable
 
 SPRINT_SORT_FIELDS = {"startDate": "startDate", "name": "nameKey", "createdAt": "createdAt"}
 DEFAULT_SPRINT_SORT = "-startDate"
 
-_TRACKED_FIELDS = ("name", "goal", "startDate", "endDate")
+_TRACKED_FIELDS = ("name", "goal", "startDate", "endDate", "capacityStoryPoints")
 
 
 def _rule_error(error: SprintRuleError) -> BusinessRuleError:
@@ -47,6 +49,7 @@ class SprintService:
     def __init__(self, db: Database) -> None:
         self.sprints = SprintRepository(db)
         self.projects = ProjectRepository(db)
+        self.issues = IssueRepository(db)
         self.audit = AuditLogRepository(db)
 
     # Leitura -------------------------------------------------------------------------------
@@ -86,6 +89,7 @@ class SprintService:
         self._validate_dates(data.start_date, end)
         start_at, end_at = _at(data.start_date), _at(end)
         self._ensure_no_overlap(project_id, start_at, end_at)
+        capacity = self._validate_capacity(data.capacity_story_points)
 
         now = datetime.now(UTC)
         document: dict[str, Any] = {
@@ -96,6 +100,7 @@ class SprintService:
             "status": SprintStatus.PLANNED.value,
             "startDate": start_at,
             "endDate": end_at,
+            "capacityStoryPoints": capacity,
             "committedStoryPoints": None,
             "committedIssueCount": None,
             "startedAt": None,
@@ -128,6 +133,8 @@ class SprintService:
             changes["nameKey"] = name_key(changes["name"])
         if "goal" in provided:
             changes["goal"] = (data.goal or "").strip()
+        if "capacity_story_points" in provided:
+            changes["capacityStoryPoints"] = self._validate_capacity(data.capacity_story_points)
 
         current_start: date = sprint["startDate"].date()
         current_end: date = sprint["endDate"].date()
@@ -180,7 +187,9 @@ class SprintService:
     def to_responses(
         self, user: User, project: dict[str, Any], sprints: Iterable[dict[str, Any]]
     ) -> list[SprintResponse]:
+        sprints = list(sprints)
         writable = can_manage_sprints(user) and not is_archived(project)
+        totals = self.issues.sprint_totals([sprint["_id"] for sprint in sprints])
         responses = []
         for sprint in sprints:
             start: date = sprint["startDate"].date()
@@ -195,6 +204,8 @@ class SprintService:
                     start_date=start,
                     end_date=end,
                     duration_days=duration_days(start, end),
+                    capacity_story_points=sprint.get("capacityStoryPoints"),
+                    scope=SprintScope(**totals.get(sprint["_id"], {})),
                     committed_story_points=sprint.get("committedStoryPoints"),
                     committed_issue_count=sprint.get("committedIssueCount"),
                     started_at=sprint.get("startedAt"),
@@ -254,6 +265,13 @@ class SprintService:
     def _validate_dates(start: date, end: date) -> None:
         try:
             validate_dates(start, end)
+        except SprintRuleError as error:
+            raise _rule_error(error) from error
+
+    @staticmethod
+    def _validate_capacity(value: float | None) -> float | None:
+        try:
+            return validate_capacity(value)
         except SprintRuleError as error:
             raise _rule_error(error) from error
 

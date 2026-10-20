@@ -17,6 +17,19 @@ import { addDays, type Sprint } from '@/services/sprints'
 const MAX_DURATION_DAYS = 60
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
+const MAX_CAPACITY = 1000
+
+const validCapacity = (value: string) => {
+  if (value.trim() === '') return true
+  const points = Number(value)
+  return Number.isFinite(points) && points >= 0 && points <= MAX_CAPACITY && (points * 2) % 1 === 0
+}
+
+/** Campo vazio: sem capacidade definida. */
+function parseCapacity(value: string): number | null {
+  return value.trim() === '' ? null : Number(value)
+}
+
 const validDates = (data: { startDate: string; endDate: string }) =>
   ISO_DATE.test(data.startDate) && ISO_DATE.test(data.endDate)
 
@@ -26,6 +39,9 @@ const sprintSchema = z
     goal: z.string().max(1000, 'Máximo 1000 caracteres'),
     startDate: z.iso.date('Indique a data de início'),
     endDate: z.iso.date('Indique a data de fim'),
+    capacity: z
+      .string()
+      .refine(validCapacity, `Entre 0 e ${MAX_CAPACITY} story points, em múltiplos de 0,5`),
   })
   .refine((data) => !validDates(data) || data.endDate >= data.startDate, {
     message: 'A data de fim não pode ser anterior à data de início',
@@ -110,6 +126,19 @@ function SprintFormFields({
           />
         </Field>
       </div>
+      <Field
+        label="Capacidade (story points)"
+        htmlFor="sprint-capacity"
+        error={fieldError('capacity') ?? serverErrors.capacityStoryPoints}
+      >
+        <Input
+          id="sprint-capacity"
+          inputMode="decimal"
+          className="max-w-40"
+          aria-invalid={fieldError('capacity') ? true : undefined}
+          {...form.register('capacity')}
+        />
+      </Field>
       {startLocked && (
         <p className="text-sm text-muted-foreground">
           O sprint está ativo: a data de início já não pode ser alterada.
@@ -156,6 +185,7 @@ export function SprintCreatePage() {
     goal: '',
     startDate: nextStart,
     endDate: addDays(nextStart, durationDays - 1),
+    capacity: previous?.capacityStoryPoints != null ? String(previous.capacityStoryPoints) : '',
   }
 
   return (
@@ -166,9 +196,9 @@ export function SprintCreatePage() {
         durationDays={durationDays}
         submitting={mutation.isPending}
         error={mutation.error}
-        onSubmit={(values) =>
+        onSubmit={({ capacity, ...values }) =>
           mutation.mutate(
-            { projectId: project.id, ...values },
+            { projectId: project.id, ...values, capacityStoryPoints: parseCapacity(capacity) },
             { onSuccess: () => void navigate(`/projects/${project.id}/sprints`) },
           )
         }
@@ -211,15 +241,17 @@ export function SprintEditPage() {
           goal: data.goal,
           startDate: data.startDate,
           endDate: data.endDate,
+          capacity: data.capacityStoryPoints != null ? String(data.capacityStoryPoints) : '',
         }}
         durationDays={data.durationDays}
         submitting={mutation.isPending}
         error={mutation.error}
         onSubmit={(values) => {
-          const { startDate, ...rest } = values
+          const { startDate, capacity, ...rest } = values
           mutation.mutate(
             {
               ...rest,
+              capacityStoryPoints: parseCapacity(capacity),
               ...(data.status === 'planned' ? { startDate } : {}),
               version: data.version,
             },

@@ -90,6 +90,8 @@ export function SprintsPage() {
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
                 <TableHead>Dias</TableHead>
+                <TableHead>Issues</TableHead>
+                <TableHead>SP</TableHead>
                 <TableHead>Objetivo</TableHead>
                 {canManage && <TableHead className="w-24" />}
               </TableRow>
@@ -97,13 +99,25 @@ export function SprintsPage() {
             <TableBody>
               {sprints.data.items.map((sprint) => (
                 <TableRow key={sprint.id}>
-                  <TableCell className="font-medium">{sprint.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      className="hover:underline"
+                      to={`/projects/${project.id}/sprints/${sprint.id}`}
+                    >
+                      {sprint.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <SprintStatusBadge status={sprint.status} />
                   </TableCell>
                   <TableCell>{formatDate(sprint.startDate)}</TableCell>
                   <TableCell>{formatDate(sprint.endDate)}</TableCell>
                   <TableCell>{sprint.durationDays}</TableCell>
+                  <TableCell>{sprint.scope.issueCount}</TableCell>
+                  <TableCell>
+                    {sprint.scope.storyPoints}
+                    {sprint.capacityStoryPoints !== null && ` / ${sprint.capacityStoryPoints}`}
+                  </TableCell>
                   <TableCell className="max-w-md truncate" title={sprint.goal}>
                     {sprint.goal || '—'}
                   </TableCell>

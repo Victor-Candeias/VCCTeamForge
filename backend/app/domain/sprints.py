@@ -1,14 +1,19 @@
 """Regras de domínio dos sprints (README §4.4 e §5.4)."""
 
 from datetime import date, timedelta
+from decimal import Decimal
 from enum import StrEnum
 
+from app.domain.issues import IssueStatus, IssueType
 from app.domain.permissions import Permission
 from app.domain.projects import SPRINT_DURATION_MAX_DAYS
 from app.domain.users import User
 
 SPRINT_NAME_MAX_LENGTH = 80
 SPRINT_GOAL_MAX_LENGTH = 1000
+SPRINT_ISSUES_MAX = 300
+SPRINT_ISSUES_PER_REQUEST_MAX = 50
+CAPACITY_MAX = 1000
 
 
 class SprintStatus(StrEnum):
@@ -17,7 +22,7 @@ class SprintStatus(StrEnum):
     CLOSED = "closed"
 
 
-# Sprints que ocupam o calendário do projeto (não se podem sobrepor).
+# Sprints que ocupam o calendário do projeto (não se podem sobrepor) e aceitam planeamento.
 OPEN_STATUSES = frozenset({SprintStatus.PLANNED, SprintStatus.ACTIVE})
 
 
@@ -54,3 +59,22 @@ def validate_dates(start: date, end: date) -> None:
 
 def can_manage_sprints(user: User) -> bool:
     return user.has_permissions(Permission.SPRINTS_MANAGE)
+
+
+def validate_capacity(value: float | None) -> float | None:
+    if value is None:
+        return None
+    if value < 0 or value > CAPACITY_MAX or Decimal(str(value)) % Decimal("0.5") != 0:
+        raise SprintRuleError(
+            f"Capacidade entre 0 e {CAPACITY_MAX} story points, em múltiplos de 0,5",
+            "capacityStoryPoints",
+        )
+    return float(value)
+
+
+def validate_plannable(issue_type: IssueType | str, status: IssueStatus | str) -> None:
+    """Só entram em sprints issues por concluir; os epics agregam trabalho de vários sprints."""
+    if IssueType(issue_type) is IssueType.EPIC:
+        raise SprintRuleError("Um epic não pode ser associado a um sprint", "issueIds")
+    if IssueStatus(status) is IssueStatus.DONE:
+        raise SprintRuleError("Uma issue concluída não pode ser associada a um sprint", "issueIds")

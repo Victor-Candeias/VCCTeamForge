@@ -6,7 +6,8 @@ from app.domain.permissions import Permission
 from app.domain.sprints import SprintStatus
 from app.domain.users import User
 from app.schemas.common import Page, PageParams, parse_sort
-from app.schemas.sprints import SprintCreate, SprintResponse, SprintUpdate
+from app.schemas.sprints import SprintCreate, SprintIssuesAdd, SprintResponse, SprintUpdate
+from app.services.sprint_planning import SprintPlanningService
 from app.services.sprints import DEFAULT_SPRINT_SORT, SPRINT_SORT_FIELDS, SprintService
 
 router = APIRouter(prefix="/sprints", tags=["sprints"])
@@ -17,6 +18,10 @@ can_manage = require_permissions(Permission.SPRINTS_MANAGE)
 
 def get_sprint_service(db: Database = Depends(get_db)) -> SprintService:
     return SprintService(db)
+
+
+def get_planning_service(db: Database = Depends(get_db)) -> SprintPlanningService:
+    return SprintPlanningService(db)
 
 
 @router.get("", response_model=Page[SprintResponse])
@@ -68,3 +73,25 @@ def update_sprint(
     service: SprintService = Depends(get_sprint_service),
 ) -> SprintResponse:
     return service.update(user, parse_object_id(sprint_id, "Sprint"), data)
+
+
+@router.post("/{sprint_id}/issues", response_model=SprintResponse)
+def add_sprint_issues(
+    sprint_id: str,
+    data: SprintIssuesAdd,
+    user: User = Depends(can_manage),
+    service: SprintPlanningService = Depends(get_planning_service),
+) -> SprintResponse:
+    return service.add_issues(user, parse_object_id(sprint_id, "Sprint"), data)
+
+
+@router.delete("/{sprint_id}/issues/{issue_id}", response_model=SprintResponse)
+def remove_sprint_issue(
+    sprint_id: str,
+    issue_id: str,
+    user: User = Depends(can_manage),
+    service: SprintPlanningService = Depends(get_planning_service),
+) -> SprintResponse:
+    return service.remove_issue(
+        user, parse_object_id(sprint_id, "Sprint"), parse_object_id(issue_id, "Issue")
+    )

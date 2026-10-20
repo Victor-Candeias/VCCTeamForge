@@ -9,6 +9,14 @@ export const sprintStatusLabels: Record<SprintStatus, string> = {
   closed: 'Fechado',
 }
 
+export type SprintScope = {
+  issueCount: number
+  storyPoints: number
+  unestimatedCount: number
+  completedIssueCount: number
+  completedStoryPoints: number
+}
+
 export type Sprint = {
   id: string
   projectId: string
@@ -18,6 +26,8 @@ export type Sprint = {
   startDate: string
   endDate: string
   durationDays: number
+  capacityStoryPoints: number | null
+  scope: SprintScope
   committedStoryPoints: number | null
   committedIssueCount: number | null
   startedAt: string | null
@@ -41,6 +51,7 @@ export type SprintInput = {
   goal: string
   startDate: string
   endDate: string | null
+  capacityStoryPoints?: number | null
 }
 
 export function listSprints(filters: SprintFilters) {
@@ -60,6 +71,17 @@ export function updateSprint(sprintId: string, input: Partial<SprintInput> & { v
     method: 'PATCH',
     body: JSON.stringify(input),
   })
+}
+
+export function addSprintIssues(sprintId: string, issueIds: string[]) {
+  return apiFetch<Sprint>(`/sprints/${sprintId}/issues`, {
+    method: 'POST',
+    body: JSON.stringify({ issueIds }),
+  })
+}
+
+export function removeSprintIssue(sprintId: string, issueId: string) {
+  return apiFetch<Sprint>(`/sprints/${sprintId}/issues/${issueId}`, { method: 'DELETE' })
 }
 
 /** Soma dias a uma data `AAAA-MM-DD` (em UTC, sem efeitos de fuso horário). */

@@ -61,6 +61,52 @@ class IssueRepository(MongoRepository):
             return_document=ReturnDocument.AFTER,
         )
 
+    # Sprints -------------------------------------------------------------------------------
+
+    def sprint_totals(self, sprint_ids: list[ObjectId]) -> dict[ObjectId, dict[str, Any]]:
+        """Totais de âmbito por sprint (issues, story points, sem estimativa e concluídas)."""
+        if not sprint_ids:
+            return {}
+        done = {"$eq": ["$status", "done"]}
+        points = {"$ifNull": ["$storyPoints", 0]}
+        pipeline = [
+            {"$match": {"sprintId": {"$in": list(set(sprint_ids))}}},
+            {
+                "$group": {
+                    "_id": "$sprintId",
+                    "issueCount": {"$sum": 1},
+                    "storyPoints": {"$sum": points},
+                    "unestimatedCount": {
+                        "$sum": {"$cond": [{"$eq": [{"$ifNull": ["$storyPoints", -1]}, -1]}, 1, 0]}
+                    },
+                    "completedIssueCount": {"$sum": {"$cond": [done, 1, 0]}},
+                    "completedStoryPoints": {"$sum": {"$cond": [done, points, 0]}},
+                }
+            },
+        ]
+        return {row.pop("_id"): row for row in self.collection.aggregate(pipeline)}
+
+    def count_in_sprint(self, sprint_id: ObjectId) -> int:
+        return self.collection.count_documents({"sprintId": sprint_id})
+
+    def set_sprint(
+        self,
+        issue_id: ObjectId,
+        *,
+        expected_sprint_id: ObjectId | None,
+        sprint_id: ObjectId | None,
+        now: datetime,
+    ) -> dict[str, Any] | None:
+        """Muda o sprint só se a issue ainda estiver em ``expected_sprint_id``.
+
+        Devolve a issue atualizada ou ``None`` se entretanto mudou de sprint.
+        """
+        return self.collection.find_one_and_update(
+            {"_id": issue_id, "sprintId": expected_sprint_id},
+            {"$set": {"sprintId": sprint_id, "updatedAt": now}, "$inc": {"version": 1}},
+            return_document=ReturnDocument.AFTER,
+        )
+
     # Ordem manual (rank) -------------------------------------------------------------------
 
     def max_rank(self, project_id: ObjectId) -> float:

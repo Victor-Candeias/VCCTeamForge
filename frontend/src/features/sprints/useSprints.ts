@@ -1,9 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  addSprintIssues,
   createSprint,
   getSprint,
   listSprints,
+  removeSprintIssue,
   updateSprint,
   type Sprint,
   type SprintFilters,
@@ -48,6 +50,32 @@ export function useUpdateSprint(sprintId: string) {
   const update = useSprintCacheUpdate()
   return useMutation({
     mutationFn: (input: Parameters<typeof updateSprint>[1]) => updateSprint(sprintId, input),
+    onSuccess: update,
+  })
+}
+
+/** Associar/remover issues muda o sprint e as listas de issues (backlog, quadro). */
+function useSprintScopeUpdate() {
+  const queryClient = useQueryClient()
+  const update = useSprintCacheUpdate()
+  return (sprint: Sprint) => {
+    update(sprint)
+    void queryClient.invalidateQueries({ queryKey: ['issues'] })
+  }
+}
+
+export function useAddSprintIssues(sprintId: string) {
+  const update = useSprintScopeUpdate()
+  return useMutation({
+    mutationFn: (issueIds: string[]) => addSprintIssues(sprintId, issueIds),
+    onSuccess: update,
+  })
+}
+
+export function useRemoveSprintIssue(sprintId: string) {
+  const update = useSprintScopeUpdate()
+  return useMutation({
+    mutationFn: (issueId: string) => removeSprintIssue(sprintId, issueId),
     onSuccess: update,
   })
 }

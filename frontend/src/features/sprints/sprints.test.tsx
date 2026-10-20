@@ -26,6 +26,14 @@ function testSprint(overrides: Record<string, unknown> = {}) {
     startDate: '2099-01-02',
     endDate: '2099-01-15',
     durationDays: 14,
+    capacityStoryPoints: null,
+    scope: {
+      issueCount: 0,
+      storyPoints: 0,
+      unestimatedCount: 0,
+      completedIssueCount: 0,
+      completedStoryPoints: 0,
+    },
     committedStoryPoints: null,
     committedIssueCount: null,
     startedAt: null,
@@ -59,6 +67,10 @@ describe('lista de sprints', () => {
     )
     expect(screen.queryByRole('link', { name: 'Editar Sprint 0' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Novo sprint' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sprint 1' })).toHaveAttribute(
+      'href',
+      '/projects/p1/sprints/s1',
+    )
   })
 
   it('esconde as ações sem permissão e mostra estado vazio', async () => {
@@ -100,6 +112,7 @@ describe('formulário de sprint', () => {
     await user.type(screen.getByLabelText('Data de início'), '2099-02-01')
     expect(screen.getByLabelText('Data de fim')).toHaveValue('2099-02-14')
     await user.type(screen.getByLabelText('Objetivo'), 'Entregar sprints')
+    await user.type(screen.getByLabelText('Capacidade (story points)'), '21.5')
     await user.click(screen.getByRole('button', { name: 'Criar sprint' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/projects/p1/sprints'))
@@ -109,6 +122,7 @@ describe('formulário de sprint', () => {
       goal: 'Entregar sprints',
       startDate: '2099-02-01',
       endDate: '2099-02-14',
+      capacityStoryPoints: 21.5,
     })
   })
 
@@ -172,7 +186,121 @@ describe('formulário de sprint', () => {
       name: 'Sprint 1',
       goal: 'Concluir autenticação',
       endDate: '2099-01-20',
+      capacityStoryPoints: null,
       version: 2,
     })
+  })
+})
+
+function testIssue(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'i1',
+    projectId: 'p1',
+    key: 'APP-1',
+    number: 1,
+    type: 'story',
+    title: 'Login com SSO',
+    status: 'todo',
+    priority: 'medium',
+    assignee: null,
+    storyPoints: 3,
+    labels: [],
+    blocked: false,
+    dueDate: null,
+    parentIssueId: null,
+    sprintId: null,
+    rank: 1024,
+    updatedAt: '2026-01-02T10:00:00Z',
+    version: 1,
+    ...overrides,
+  }
+}
+
+const SPRINT_ISSUES = 'GET /api/issues?projectId=p1&sprintId=s1&sort=rank&pageSize=100'
+const BACKLOG =
+  'GET /api/issues?projectId=p1&sprintId=none&status=todo&status=in_progress&status=code_review' +
+  '&status=testing&type=story&type=task&type=bug&type=spike&type=improvement&type=subtask' +
+  '&sort=rank&pageSize=100'
+
+describe('planeamento do sprint', () => {
+  it('mostra totais face à capacidade e associa/remove issues', async () => {
+    const added: unknown[] = []
+    let removed = 0
+    const scope = {
+      issueCount: 1,
+      storyPoints: 8,
+      unestimatedCount: 0,
+      completedIssueCount: 0,
+      completedStoryPoints: 0,
+    }
+    mockApi({
+      ...csrfHandler,
+      'GET /api/users/me': () => jsonResponse(sprintManager),
+      'GET /api/projects/p1': () => jsonResponse(testProject()),
+      'GET /api/sprints/s1': () => jsonResponse(testSprint({ capacityStoryPoints: 5, scope })),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([testIssue({ sprintId: 's1', storyPoints: 8 })], 1, 100)),
+      [BACKLOG]: () => jsonResponse(pageOf([testIssue({ id: 'i2', key: 'APP-2', title: 'Logout' })], 1, 100)),
+      'POST /api/sprints/s1/issues': (init) => {
+        added.push(JSON.parse(String(init.body)))
+        return jsonResponse(testSprint())
+      },
+      'DELETE /api/sprints/s1/issues/i1': () => {
+        removed += 1
+        return jsonResponse(testSprint())
+      },
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    expect(await screen.findByText('Capacidade: 5')).toBeInTheDocument()
+    expect(screen.getByText(/excede a capacidade do sprint em 3 story points/)).toBeInTheDocument()
+    expect(await screen.findByText('Logout')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar APP-2 ao sprint' }))
+    await waitFor(() => expect(added).toEqual([{ issueIds: ['i2'] }]))
+    await user.click(screen.getByRole('button', { name: 'Remover APP-1 do sprint' }))
+    await waitFor(() => expect(removed).toBe(1))
+  })
+
+  it('estima em linha com controlo de versão', async () => {
+    const bodies: unknown[] = []
+    mockApi({
+      ...csrfHandler,
+      'GET /api/users/me': () => jsonResponse(sprintManager),
+      'GET /api/projects/p1': () => jsonResponse(testProject()),
+      'GET /api/sprints/s1': () => jsonResponse(testSprint()),
+      [SPRINT_ISSUES]: () =>
+        jsonResponse(pageOf([testIssue({ sprintId: 's1', storyPoints: null, version: 4 })], 1, 100)),
+      [BACKLOG]: () => jsonResponse(pageOf([], 1, 100)),
+      'PATCH /api/issues/i1': (init) => {
+        bodies.push(JSON.parse(String(init.body)))
+        return jsonResponse(testIssue({ storyPoints: 5, version: 5 }))
+      },
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    const input = await screen.findByLabelText('Story points de APP-1')
+    await user.type(input, '2.3{Enter}')
+    expect(await screen.findByRole('alert')).toHaveTextContent('múltiplos de 0,5')
+    expect(bodies).toHaveLength(0)
+
+    await user.type(input, '5{Enter}')
+    await waitFor(() => expect(bodies).toEqual([{ version: 4, storyPoints: 5 }]))
+  })
+
+  it('sem gestão de sprints só consulta', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(testUser),
+      'GET /api/projects/p1': () => jsonResponse(testProject({ canManage: false })),
+      'GET /api/sprints/s1': () => jsonResponse(testSprint({ canEdit: false })),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([testIssue({ sprintId: 's1' })], 1, 100)),
+    })
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    expect(await screen.findByText('Login com SSO')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Remover/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Backlog' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Story points de APP-1')).not.toBeInTheDocument()
   })
 })

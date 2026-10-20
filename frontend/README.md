@@ -96,13 +96,18 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 
 | Rota | Página |
 |------|--------|
-| `/projects/:projectId/sprints` | Separador "Sprints": lista paginada (estado, datas, duração, objetivo) com filtro de estado |
+| `/projects/:projectId/sprints` | Separador "Sprints": lista paginada (estado, datas, duração, issues, story points/capacidade, objetivo) com filtro de estado |
 | `/projects/:projectId/sprints/new` | Criação; sugere `Sprint N+1`, início no dia seguinte ao fim do último sprint (ou hoje) e fim pela duração do projeto |
+| `/projects/:projectId/sprints/:sprintId` | Planeamento: totais (issues, story points vs capacidade, sem estimativa, concluídas), issues do sprint e backlog elegível para adicionar/remover |
 | `/projects/:projectId/sprints/:sprintId/edit` | Edição (envia `version`); num sprint ativo a data de início é só de leitura |
 
 - "Novo sprint" e "Editar" só aparecem com `sprints:manage`, projeto não arquivado e `canEdit`.
 - A validação zod espelha o backend (fim ≥ início, máximo de 60 dias); os erros 409/422 do
-  servidor aparecem no campo indicado em `field`.
+  servidor aparecem no campo indicado em `field`. A capacidade é opcional (vazio = sem
+  capacidade).
+- No planeamento, o backlog elegível exclui epics e issues concluídas; adicionar/remover só com
+  `canEdit`. A estimativa em linha (`EstimateInput`) grava ao sair do campo ou com Enter via
+  `PATCH /api/issues/{id}` com `version` (só com `issues:write`) e invalida issues e sprints.
 
 ## Testes
 

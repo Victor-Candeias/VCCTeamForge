@@ -253,11 +253,13 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 | Método e rota | Permissão | Notas |
 |---------------|-----------|-------|
 | `GET /api/sprints?projectId=` | `projects:read` + acesso | Filtros `status` (repetível) e `q`; `sort` `startDate`/`name`/`createdAt` (omissão `-startDate`); paginado |
-| `POST /api/sprints` | `sprints:manage` + acesso | `{projectId, name, goal?, startDate, endDate?}` → 201; auditoria `sprint.created` |
-| `GET /api/sprints/{id}` | `projects:read` + acesso | Inclui `durationDays` e `canEdit` |
-| `PATCH /api/sprints/{id}` | `sprints:manage` + acesso | `{name?, goal?, startDate?, endDate?, version}`; auditoria `sprint.updated` |
+| `POST /api/sprints` | `sprints:manage` + acesso | `{projectId, name, goal?, startDate, endDate?, capacityStoryPoints?}` → 201; auditoria `sprint.created` |
+| `GET /api/sprints/{id}` | `projects:read` + acesso | Inclui `durationDays`, `capacityStoryPoints`, `scope` e `canEdit` |
+| `PATCH /api/sprints/{id}` | `sprints:manage` + acesso | `{name?, goal?, startDate?, endDate?, capacityStoryPoints?, version}`; auditoria `sprint.updated` |
+| `POST /api/sprints/{id}/issues` | `sprints:manage` + acesso | `{issueIds}` (1–50) → sprint atualizado; auditoria `sprint.issues_added` |
+| `DELETE /api/sprints/{id}/issues/{issueId}` | `sprints:manage` + acesso | Devolve a issue ao backlog → sprint atualizado; auditoria `sprint.issue_removed` |
 
-- Estados `planned`, `active`, `closed` (iniciar e fechar ficam para o DEV-016). Sprints novos
+- Estados `planned`, `active`, `closed` (iniciar no DEV-017, fechar no DEV-018). Sprints novos
   ficam `planned`.
 - Nome único por projeto sem distinção de maiúsculas (`nameKey`) → 409 com `field=name`.
 - `endDate` por omissão = início + `settings.sprintDurationDays` − 1; fim ≥ início e duração
@@ -266,6 +268,16 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 - Sprint ativo: a data de início já não muda; sprint fechado e projeto arquivado → só leitura (422).
 - `projectId` inválido ou sem acesso no corpo → 422 (`field=projectId`); `GET /api/sprints`
   sem `projectId` → 422. A migration `0004_sprint_collections` cria a collection `sprints`.
+- **Planeamento (DEV-016):** `capacityStoryPoints` opcional (0–1000, múltiplos de 0,5). `scope`
+  agrega as issues do sprint: `issueCount`, `storyPoints`, `unestimatedCount`,
+  `completedIssueCount`, `completedStoryPoints`. A estimativa faz-se em `PATCH /api/issues/{id}`
+  (`storyPoints`).
+- Só entram em sprints `planned`/`active` issues do mesmo projeto, por concluir e que não sejam
+  epics (422 com `field=issueIds` e `issueId`); máximo de 300 issues por sprint. Uma issue de
+  outro sprint aberto muda de sprint; de um sprint fechado → 422. Adicionar uma issue que já
+  está no sprint não faz nada.
+- Cada mudança é condicional ao `sprintId` atual da issue (409 se mudou entretanto), incrementa
+  a `version` da issue e regista no histórico a alteração `sprintId`.
 
 ### Casos e planos de teste
 

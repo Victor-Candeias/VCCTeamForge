@@ -14,6 +14,10 @@
     {"collection": "issues", "name": "issues_assigneeId_status", "keys": [["assigneeId", 1], ["status", 1]]},
     {"collection": "issues", "name": "issues_key_unique", "keys": [["key", 1]], "options": {"unique": true}},
     {"collection": "issues", "name": "issues_parentIssueId", "keys": [["parentIssueId", 1]]},
+    {"collection": "issues", "name": "issues_projectId_updatedAt", "keys": [["projectId", 1], ["updatedAt", -1]]},
+    {"collection": "issues", "name": "issues_projectId_priorityRank", "keys": [["projectId", 1], ["priorityRank", -1]]},
+    {"collection": "issues", "name": "issues_projectId_labels", "keys": [["projectId", 1], ["labels", 1]]},
+    {"collection": "issues", "name": "issues_projectId_type", "keys": [["projectId", 1], ["type", 1]]},
 
     {"collection": "issue_history", "name": "issue_history_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", -1]]},
 

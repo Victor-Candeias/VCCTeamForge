@@ -97,15 +97,39 @@ export function canBeParent(type: IssueType, candidate: IssueSummary) {
   return candidate.type === 'epic'
 }
 
-export type IssueFilters = {
-  projectId: string
+export type IssueSearchParams = {
+  projectId?: string
+  status?: IssueStatus[]
+  priority?: Priority[]
+  type?: IssueType[]
+  assigneeId?: string[]
+  sprintId?: string
+  label?: string[]
+  blocked?: boolean
+  parentIssueId?: string
+  q?: string
+  sort?: string
   page?: number
   pageSize?: number
-  sort?: string
 }
 
-export function listIssues(filters: IssueFilters) {
-  return apiFetch<Page<IssueSummary>>(`/issues${toQueryString(filters)}`)
+export const issueSortFields = [
+  'number',
+  'title',
+  'status',
+  'priority',
+  'updatedAt',
+  'createdAt',
+  'dueDate',
+] as const
+export type IssueSortField = (typeof issueSortFields)[number]
+
+export function searchIssues(params: IssueSearchParams) {
+  return apiFetch<Page<IssueSummary>>(`/issues${toQueryString(params)}`)
+}
+
+export function listProjectLabels(projectId: string) {
+  return apiFetch<string[]>(`/projects/${projectId}/labels`)
 }
 
 export function getIssueByKey(key: string) {

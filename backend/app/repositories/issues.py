@@ -35,11 +35,16 @@ class IssueRepository(MongoRepository):
         sort: list[tuple[str, int]],
         skip: int,
         limit: int,
+        projection: dict[str, int] | None = None,
     ) -> list[dict[str, Any]]:
-        return list(self.collection.find(query).sort(sort).skip(skip).limit(limit))
+        cursor = self.collection.find(query, projection).sort(sort).skip(skip).limit(limit)
+        return list(cursor)
 
     def count(self, query: dict[str, Any]) -> int:
         return self.collection.count_documents(query)
+
+    def distinct_labels(self, project_id: ObjectId) -> list[str]:
+        return sorted(self.collection.distinct("labels", {"projectId": project_id}))
 
     def update_versioned(
         self,

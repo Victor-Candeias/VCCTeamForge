@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
 
 import { Pagination } from '@/components/Pagination'
+import { SortableHeader } from '@/components/SortableHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,29 +13,39 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { BlockedBadge, IssueStatusBadge, IssueTypeBadge } from '@/features/issues/IssueBadges'
+import { IssueFilters } from '@/features/issues/IssueFilters'
+import { useIssueSearchParams } from '@/features/issues/useIssueSearchParams'
 import { useIssues } from '@/features/issues/useIssues'
 import { PriorityBadge } from '@/features/projects/ProjectBadges'
 import { useProjectContext } from '@/features/projects/projectContext'
 import { usePermission } from '@/hooks/usePermissions'
 import { formatDateTime } from '@/services/common'
 
-const PAGE_SIZE = 25
-
 export function ProjectIssuesPage() {
   const { project } = useProjectContext()
   const canWrite = usePermission('issues:write') && project.status !== 'archived'
-  const [page, setPage] = useState(1)
-  const issues = useIssues({ projectId: project.id, page, pageSize: PAGE_SIZE })
+  const search = useIssueSearchParams(project.id)
+  const issues = useIssues(search.params)
+  const sortable = (field: string, label: string) => (
+    <SortableHeader field={field} label={label} sort={search.sort} onSort={search.setSort} />
+  )
 
   return (
     <div className="space-y-4">
-      {canWrite && (
-        <div className="flex justify-end">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <IssueFilters
+          projectId={project.id}
+          filters={search.filters}
+          activeFilters={search.activeFilters}
+          onChange={search.setFilter}
+          onClear={search.clearFilters}
+        />
+        {canWrite && (
           <Button asChild>
             <Link to={`/projects/${project.id}/issues/new`}>Nova issue</Link>
           </Button>
-        </div>
-      )}
+        )}
+      </div>
       {issues.isError && (
         <Alert variant="destructive">
           <AlertDescription>Não foi possível carregar as issues.</AlertDescription>
@@ -43,21 +53,25 @@ export function ProjectIssuesPage() {
       )}
       {issues.isPending && <p className="text-muted-foreground">A carregar…</p>}
       {issues.data && issues.data.items.length === 0 && (
-        <p className="text-muted-foreground">Ainda não há issues neste projeto.</p>
+        <p className="text-muted-foreground">
+          {search.activeFilters > 0
+            ? 'Nenhuma issue corresponde aos filtros.'
+            : 'Ainda não há issues neste projeto.'}
+        </p>
       )}
       {issues.data && issues.data.items.length > 0 && (
         <>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Chave</TableHead>
-                <TableHead>Título</TableHead>
+                {sortable('number', 'Chave')}
+                {sortable('title', 'Título')}
                 <TableHead>Tipo</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Prioridade</TableHead>
+                {sortable('status', 'Estado')}
+                {sortable('priority', 'Prioridade')}
                 <TableHead>Responsável</TableHead>
                 <TableHead>SP</TableHead>
-                <TableHead>Atualizada</TableHead>
+                {sortable('updatedAt', 'Atualizada')}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -94,7 +108,8 @@ export function ProjectIssuesPage() {
             page={issues.data.page}
             pageSize={issues.data.pageSize}
             total={issues.data.total}
-            onChange={setPage}
+            onChange={search.setPage}
+            onPageSizeChange={search.setPageSize}
           />
         </>
       )}

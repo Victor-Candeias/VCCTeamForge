@@ -16,12 +16,14 @@ from app.schemas.projects import (
     VersionInput,
 )
 from app.services.common import object_id_or_422
+from app.services.issues import IssueService
 from app.services.projects import PROJECT_SORT_FIELDS, ProjectService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 can_read = require_permissions(Permission.PROJECTS_READ)
 can_manage = require_permissions(Permission.PROJECTS_MANAGE)
+can_read_issues = require_permissions(Permission.ISSUES_READ)
 
 
 def get_project_service(db: Database = Depends(get_db)) -> ProjectService:
@@ -138,3 +140,15 @@ def remove_member(
     return service.remove_member(
         user, _project_id(project_id), parse_object_id(member_id, "Membro"), version
     )
+
+
+@router.get("/{project_id}/labels", response_model=list[str])
+def list_labels(
+    project_id: str,
+    response: Response,
+    user: User = Depends(can_read_issues),
+    db: Database = Depends(get_db),
+) -> list[str]:
+    """Labels distintas usadas nas issues do projeto (para filtros)."""
+    response.headers["Cache-Control"] = "no-store"
+    return IssueService(db).project_labels(user, _project_id(project_id))

@@ -53,7 +53,7 @@ Resposta `Page<IssueSummary>` (`items`, `total`, `page`, `pageSize`) sem `descri
 | Modify | `backend/app/api/routes/projects.py` | `GET /projects/{id}/labels` |
 | Modify | `database/indexes/indexes.json` | `issues_projectId_updatedAt`, `issues_projectId_priorityRank`, `issues_projectId_labels`, `issues_projectId_type` |
 
-- [ ] Planos de execução (`explain`) das consultas por projeto usam índice (verificado em teste)
+- [x] Planos de execução (`explain`) das consultas por projeto usam índice (verificado em teste)
 
 ### Phase 3: Frontend
 
@@ -67,7 +67,7 @@ Resposta `Page<IssueSummary>` (`items`, `total`, `page`, `pageSize`) sem `descri
 | Modify | `frontend/src/services/issues.ts` | `searchIssues(params)`, `listProjectLabels` |
 | Create | `frontend/src/features/issues/issueSearch.test.tsx` | Filtros refletidos no URL e no pedido, paginação, ordenação |
 
-- [ ] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
+- [x] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
 
 ## Impacted Files
 

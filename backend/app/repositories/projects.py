@@ -35,6 +35,9 @@ class ProjectRepository(MongoRepository):
     ) -> list[dict[str, Any]]:
         return list(self.collection.find(query).sort(sort).skip(skip).limit(limit))
 
+    def find_ids(self, query: dict[str, Any]) -> list[ObjectId]:
+        return [document["_id"] for document in self.collection.find(query, {"_id": 1})]
+
     def count(self, query: dict[str, Any]) -> int:
         return self.collection.count_documents(query)
 

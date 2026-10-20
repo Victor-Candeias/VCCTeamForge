@@ -66,7 +66,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 
 | Rota | Página |
 |------|--------|
-| `/projects/:projectId/issues` | Separador "Issues": tabela paginada e botão "Nova issue" |
+| `/projects/:projectId/issues` | Separador "Issues": filtros (pesquisa com debounce, estado, prioridade, tipo, responsável, label, bloqueadas), ordenação por cabeçalho (`aria-sort`) e paginação; tudo guardado no URL (`useIssueSearchParams`) |
 | `/projects/:projectId/issues/new` | Criação (react-hook-form + zod); QA só vê o tipo Bug |
 | `/issues/:issueKey` | Detalhe: descrição Markdown, critérios, dependências, mudança de estado (só `allowedTransitions`), bloquear/desbloquear com motivo |
 | `/issues/:issueKey/edit` | Edição (o tipo não muda); a lista de pais segue a hierarquia do backend (`canBeParent`) |

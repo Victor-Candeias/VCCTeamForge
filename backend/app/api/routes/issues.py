@@ -1,13 +1,14 @@
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Response, status
 from pymongo.database import Database
 
-from app.api.deps import get_db, parse_object_id, require_permissions
+from app.api.deps import get_db, require_permissions
 from app.core.errors import NotFoundError
 from app.domain.permissions import Permission
 from app.domain.users import User
-from app.schemas.common import Page, PageParams, parse_sort
+from app.schemas.common import Page, PageParams
+from app.schemas.issue_search import IssueSearchQuery
 from app.schemas.issues import Issue, IssueCreate, IssueSummary, IssueUpdate
 from app.services.issues import IssueService
 
@@ -15,8 +16,6 @@ router = APIRouter(prefix="/issues", tags=["issues"])
 
 can_read = require_permissions(Permission.ISSUES_READ)
 can_write = require_permissions(Permission.ISSUES_WRITE)
-
-ISSUE_SORT_FIELDS = {"number": "number", "updatedAt": "updatedAt"}
 
 
 def get_issue_service(db: Database = Depends(get_db)) -> IssueService:
@@ -33,19 +32,13 @@ def issue_object_id(issue_id: str) -> ObjectId:
 @router.get("", response_model=Page[IssueSummary])
 def list_issues(
     response: Response,
-    project_id: str = Query(alias="projectId"),
-    sort: str | None = Query(default=None, max_length=30),
+    query: IssueSearchQuery = Depends(IssueSearchQuery.from_query),
     page: PageParams = Depends(),
     user: User = Depends(can_read),
     service: IssueService = Depends(get_issue_service),
 ) -> Page[IssueSummary]:
     response.headers["Cache-Control"] = "no-store"
-    project = service.project_for_listing(user, parse_object_id(project_id, "Projeto"))
-    items, total = service.search(
-        {"projectId": project["_id"]},
-        sort=parse_sort(sort, ISSUE_SORT_FIELDS, "-number"),
-        page=page,
-    )
+    items, total = service.search(user, query, page)
     return Page[IssueSummary](items=items, total=total, page=page.page, page_size=page.page_size)
 
 

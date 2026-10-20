@@ -1,5 +1,6 @@
-"""Criação, consulta e edição de issues (DEV-010)."""
+"""Criação, pesquisa e edição de issues (DEV-010, DEV-011)."""
 
+import re
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
@@ -31,8 +32,13 @@ from app.repositories.projects import ProjectRepository
 from app.repositories.users import UserRepository
 from app.schemas.auth import UserSummary
 from app.schemas.common import PageParams
+from app.schemas.issue_search import IssueSearchQuery
 from app.schemas.issues import Issue, IssueCreate, IssueRef, IssueSummary, IssueUpdate
-from app.services.authorization import can_access_project, ensure_project_access
+from app.services.authorization import (
+    accessible_projects_filter,
+    can_access_project,
+    ensure_project_access,
+)
 from app.services.common import date_to_datetime, datetime_to_date, jsonable, object_id_or_422
 
 # Campos cujas alterações são reportadas (histórico/auditoria).
@@ -51,6 +57,32 @@ TRACKED_FIELDS = (
     "blocked",
     "blockReason",
 )
+
+
+# Campos lidos nas listas (sem descrição, critérios nem dependências).
+SUMMARY_PROJECTION = {
+    name: 1
+    for name in (
+        "projectId",
+        "key",
+        "number",
+        "type",
+        "title",
+        "status",
+        "priority",
+        "assigneeId",
+        "storyPoints",
+        "labels",
+        "blocked",
+        "dueDate",
+        "parentIssueId",
+        "sprintId",
+        "updatedAt",
+        "version",
+    )
+}
+
+ISSUE_KEY_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9]{1,9}-\d+")
 
 
 def issue_counter_name(project_id: ObjectId) -> str:
@@ -75,18 +107,61 @@ class IssueService:
     def get_accessible_by_key(self, user: User, key: str) -> tuple[dict[str, Any], dict[str, Any]]:
         return self._with_project(user, self.issues.find_by_key(key.strip().upper()))
 
-    def project_for_listing(self, user: User, project_id: ObjectId) -> dict[str, Any]:
-        return dict(ensure_project_access(user, self.projects.find_by_id(project_id)))
-
     def search(
-        self,
-        query: dict[str, Any],
-        *,
-        sort: list[tuple[str, int]],
-        page: PageParams,
+        self, user: User, query: IssueSearchQuery, page: PageParams
     ) -> tuple[list[IssueSummary], int]:
-        documents = self.issues.search(query, sort=sort, skip=page.skip, limit=page.page_size)
-        return self.to_summaries(documents), self.issues.count(query)
+        mongo_filter = self.build_search_filter(user, query)
+        documents = self.issues.search(
+            mongo_filter,
+            sort=query.sort,
+            skip=page.skip,
+            limit=page.page_size,
+            projection=SUMMARY_PROJECTION,
+        )
+        return self.to_summaries(documents), self.issues.count(mongo_filter)
+
+    def build_search_filter(self, user: User, query: IssueSearchQuery) -> dict[str, Any]:
+        """Filtro MongoDB limitado aos projetos acessíveis ao utilizador."""
+        mongo_filter: dict[str, Any] = {}
+        if query.project_id is not None:
+            ensure_project_access(user, self.projects.find_by_id(query.project_id))
+            mongo_filter["projectId"] = query.project_id
+        elif not user.is_admin:
+            mongo_filter["projectId"] = {
+                "$in": self.projects.find_ids(accessible_projects_filter(user))
+            }
+
+        if query.statuses:
+            mongo_filter["status"] = {"$in": [str(value) for value in query.statuses]}
+        if query.priorities:
+            mongo_filter["priority"] = {"$in": [str(value) for value in query.priorities]}
+        if query.types:
+            mongo_filter["type"] = {"$in": [str(value) for value in query.types]}
+        if query.assignees:
+            assignees = [
+                user.id if value == "me" else None if value == "none" else value
+                for value in query.assignees
+            ]
+            mongo_filter["assigneeId"] = {"$in": list(dict.fromkeys(assignees))}
+        if query.sprint_id is not None:
+            mongo_filter["sprintId"] = None if query.sprint_id == "none" else query.sprint_id
+        if query.labels:
+            mongo_filter["labels"] = {"$in": query.labels}
+        if query.blocked is not None:
+            mongo_filter["blocked"] = query.blocked
+        if query.parent_issue_id is not None:
+            mongo_filter["parentIssueId"] = query.parent_issue_id
+        if query.text:
+            title = {"title": {"$regex": re.escape(query.text), "$options": "i"}}
+            if ISSUE_KEY_PATTERN.fullmatch(query.text):
+                mongo_filter["$or"] = [{"key": query.text.upper()}, title]
+            else:
+                mongo_filter.update(title)
+        return mongo_filter
+
+    def project_labels(self, user: User, project_id: ObjectId) -> list[str]:
+        project = ensure_project_access(user, self.projects.find_by_id(project_id))
+        return self.issues.distinct_labels(project["_id"])
 
     # Escrita -------------------------------------------------------------------------------
 

@@ -151,10 +151,27 @@ Administrador. Projetos arquivados ficam só de leitura e saem das listas por om
 
 | Método e rota | Permissão | Notas |
 |---------------|-----------|-------|
-| `GET /api/issues?projectId=` | `issues:read` + acesso ao projeto | Paginado; `sort` `number`/`updatedAt` (omissão `-number`) |
+| `GET /api/issues` | `issues:read` | Pesquisa paginada (ver filtros abaixo); sem `projectId` abrange todos os projetos acessíveis |
 | `POST /api/issues` | `issues:write` | QA só cria `bug`; projeto arquivado → 422 |
 | `GET /api/issues/{id}`, `GET /api/issues/by-key/{key}` | `issues:read` + acesso | Inclui `canEdit`, `allowedTransitions`, pai e dependências |
 | `PATCH /api/issues/{id}` | admin/Tech Lead, ou responsável/autor | Corpo com `version`; `status`, `blocked` + `blockReason` e restantes campos |
+
+Filtros de `GET /api/issues` (listas aceitam o parâmetro repetido; valores inválidos → 422):
+
+| Parâmetro | Valores |
+|-----------|---------|
+| `projectId` | Projeto acessível (inacessível ou mal formado → 404) |
+| `status`, `priority`, `type` | Valores dos enums |
+| `assigneeId` | ID, `me` ou `none` (sem responsável) |
+| `sprintId` | ID ou `none` (backlog) |
+| `label` | Normalizada; corresponde a qualquer uma |
+| `blocked` | `true`/`false` |
+| `parentIssueId` | Filhos/subtarefas de uma issue |
+| `q` | ≤ 100 caracteres: chave exata (`DVC-12`) ou parte do título (sem distinção de maiúsculas; carateres especiais escapados) |
+| `sort` | `number`, `title`, `status`, `priority`, `updatedAt`, `createdAt`, `dueDate` (prefixo `-` = descendente; omissão `-number`) |
+
+As listas devolvem apenas os campos de resumo (sem descrição, critérios nem dependências).
+`GET /api/projects/{id}/labels` (`issues:read`) devolve as labels distintas do projeto.
 
 - **Numeração:** a chave `PROJ-N` vem de um contador atómico por projeto (`counters`,
   `issues:<projectId>`); números não são reutilizados.

@@ -3,25 +3,34 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import {
   createIssue,
   getIssueByKey,
-  listIssues,
+  listProjectLabels,
+  searchIssues,
   updateIssue,
   type Issue,
-  type IssueFilters,
+  type IssueSearchParams,
   type IssueUpdateInput,
 } from '@/services/issues'
 
 export const issueKeys = {
   all: ['issues'] as const,
-  list: (filters: IssueFilters) => ['issues', 'list', filters] as const,
+  list: (params: IssueSearchParams) => ['issues', 'list', params] as const,
+  labels: (projectId: string) => ['issues', 'labels', projectId] as const,
   detail: (key: string) => ['issues', 'detail', key] as const,
 }
 
-export function useIssues(filters: IssueFilters, enabled = true) {
+export function useIssues(params: IssueSearchParams, enabled = true) {
   return useQuery({
-    queryKey: issueKeys.list(filters),
-    queryFn: () => listIssues(filters),
+    queryKey: issueKeys.list(params),
+    queryFn: () => searchIssues(params),
     placeholderData: keepPreviousData,
     enabled,
+  })
+}
+
+export function useProjectLabels(projectId: string) {
+  return useQuery({
+    queryKey: issueKeys.labels(projectId),
+    queryFn: () => listProjectLabels(projectId),
   })
 }
 
@@ -34,6 +43,7 @@ export function useIssueCacheUpdate() {
   return (issue: Issue) => {
     queryClient.setQueryData(issueKeys.detail(issue.key), issue)
     void queryClient.invalidateQueries({ queryKey: ['issues', 'list'] })
+    void queryClient.invalidateQueries({ queryKey: ['issues', 'labels'] })
   }
 }
 

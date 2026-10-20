@@ -56,6 +56,7 @@ Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais rea
 | `MONGODB_AUTH_SOURCE` | `MONGODB_DATABASE` | |
 | `MONGODB_SERVER_SELECTION_TIMEOUT_MS` | `5000` | |
 | `MONGODB_MAX_POOL_SIZE` | `20` | Por worker |
+| `DATABASE_DIR` | `<repo>/database` | Migrations, índices e seeds |
 | `ATTACHMENTS_PATH` | `var/attachments` | Absoluto em produção |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `LOG_FORMAT` | `text` | `json` recomendado em produção |
@@ -85,6 +86,29 @@ Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais Mo
 |---|---|---|
 | `GET /api/health`, `GET /api/health/live` | Processo vivo | Sempre 200 |
 | `GET /api/health/ready` | Dependências | 200 `ok`/`degraded`; 503 se o MongoDB falhar |
+
+## Migrations, índices e seeds
+
+Executam-se pela CLI, nunca no arranque da API nem por pedido HTTP. Usam a mesma configuração
+que a API. O utilizador MongoDB precisa de `readWrite` na base de dados.
+
+```bash
+.venv/bin/python -m app.cli status             # migrations e índices em falta
+.venv/bin/python -m app.cli migrate --dry-run  # o que seria aplicado
+.venv/bin/python -m app.cli migrate            # migrations pendentes + índices
+.venv/bin/python -m app.cli seed               # dados iniciais em falta
+```
+
+- **Migrations** (`database/migrations/NNNN_nome.py`, com `up(db)` e `DESCRIPTION` opcional):
+  são aplicadas por ordem e registadas em `schema_migrations` (com checksum). Um lock em
+  `maintenance_locks`, com expiração de 15 minutos, impede execuções concorrentes. Sem
+  transações, cada `up` tem de ser idempotente. Uma migration aplicada não deve ser alterada;
+  o `status` assinala ficheiros alterados.
+- **Índices** (`database/indexes/indexes.json`): todos os índices são validados antes de se
+  criar algum, e os existentes não são tocados. Se um nome existir com outra definição, o
+  comando falha; é preciso uma migration que remova o índice antes de o redefinir.
+- **Seeds** (`database/seed/<collection>.json`): cada documento tem `_id` e só é inserido se
+  ainda não existir. Alterações feitas na Administração nunca são sobrepostas.
 
 ## MongoDB 4.4
 

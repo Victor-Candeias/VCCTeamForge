@@ -1,0 +1,33 @@
+{
+  "$comment": "Parâmetros globais iniciais. O seed só insere documentos inexistentes ($setOnInsert): alterações feitas na Administração nunca são sobrepostas. Estados provisórios até fechar as regras de transição (README §14.7).",
+  "documents": [
+    {
+      "_id": "global",
+      "issueTypes": [
+        {"key": "epic", "name": "Épico"},
+        {"key": "story", "name": "História"},
+        {"key": "task", "name": "Tarefa"},
+        {"key": "bug", "name": "Bug"},
+        {"key": "subtask", "name": "Subtarefa"}
+      ],
+      "issueStatuses": [
+        {"key": "todo", "name": "Por fazer", "category": "todo", "order": 1},
+        {"key": "in_progress", "name": "Em curso", "category": "in_progress", "order": 2},
+        {"key": "in_review", "name": "Em revisão", "category": "in_progress", "order": 3},
+        {"key": "testing", "name": "Em teste", "category": "in_progress", "order": 4},
+        {"key": "done", "name": "Concluída", "category": "done", "order": 5}
+      ],
+      "priorities": [
+        {"key": "critical", "name": "Crítica", "order": 1},
+        {"key": "high", "name": "Alta", "order": 2},
+        {"key": "medium", "name": "Média", "order": 3},
+        {"key": "low", "name": "Baixa", "order": 4}
+      ],
+      "scrum": {
+        "methodology": "scrum",
+        "sprintDurationDays": 14,
+        "estimationType": "story_points"
+      }
+    }
+  ]
+}

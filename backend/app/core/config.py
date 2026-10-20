@@ -10,6 +10,9 @@ Environment = Literal["development", "test", "production"]
 
 ENV_FILE_VARIABLE = "VCCTF_ENV_FILE"
 
+# backend/app/core/config.py -> raiz do repositório
+DEFAULT_DATABASE_DIR = Path(__file__).resolve().parents[3] / "database"
+
 
 class Settings(BaseSettings):
     """Configuração da API, lida de variáveis de ambiente e (opcionalmente) de um ficheiro .env.
@@ -39,6 +42,8 @@ class Settings(BaseSettings):
     mongodb_auth_source: str | None = None
     mongodb_server_selection_timeout_ms: int = Field(default=5000, ge=100)
     mongodb_max_pool_size: int = Field(default=20, ge=1, le=200)
+
+    database_dir: Path = DEFAULT_DATABASE_DIR
 
     attachments_path: Path = Path("var/attachments")
 

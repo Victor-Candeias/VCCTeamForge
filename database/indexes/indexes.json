@@ -1,0 +1,31 @@
+{
+  "$comment": "Índices do MongoDB 4.4 (README §5.5). Aplicados de forma idempotente por 'python -m app.cli migrate'. Os nomes são estáveis: alterar a definição de um índice existente exige uma migration que o remova primeiro.",
+  "indexes": [
+    {"collection": "users", "name": "users_normalizedEmail_unique", "keys": [["normalizedEmail", 1]], "options": {"unique": true}},
+
+    {"collection": "projects", "name": "projects_key_unique", "keys": [["key", 1]], "options": {"unique": true}},
+    {"collection": "projects", "name": "projects_memberIds", "keys": [["memberIds", 1]]},
+
+    {"collection": "issues", "name": "issues_projectId_number_unique", "keys": [["projectId", 1], ["number", 1]], "options": {"unique": true}},
+    {"collection": "issues", "name": "issues_projectId_status", "keys": [["projectId", 1], ["status", 1]]},
+    {"collection": "issues", "name": "issues_sprintId_status", "keys": [["sprintId", 1], ["status", 1]]},
+    {"collection": "issues", "name": "issues_assigneeId_status", "keys": [["assigneeId", 1], ["status", 1]]},
+
+    {"collection": "issue_history", "name": "issue_history_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", -1]]},
+
+    {"collection": "sprints", "name": "sprints_projectId_status", "keys": [["projectId", 1], ["status", 1]]},
+
+    {"collection": "test_runs", "name": "test_runs_projectId_executedAt", "keys": [["projectId", 1], ["executedAt", -1]]},
+
+    {"collection": "sessions", "name": "sessions_tokenHash_unique", "keys": [["tokenHash", 1]], "options": {"unique": true}},
+    {"collection": "sessions", "name": "sessions_userId", "keys": [["userId", 1]]},
+    {"collection": "sessions", "name": "sessions_expiresAt_ttl", "keys": [["expiresAt", 1]], "options": {"expireAfterSeconds": 0}},
+
+    {"collection": "login_attempts", "name": "login_attempts_key_createdAt", "keys": [["key", 1], ["createdAt", -1]]},
+    {"collection": "login_attempts", "name": "login_attempts_createdAt_ttl", "keys": [["createdAt", 1]], "options": {"expireAfterSeconds": 86400}},
+
+    {"collection": "audit_logs", "name": "audit_logs_createdAt", "keys": [["createdAt", -1]]},
+    {"collection": "audit_logs", "name": "audit_logs_actorId_createdAt", "keys": [["actorId", 1], ["createdAt", -1]]},
+    {"collection": "audit_logs", "name": "audit_logs_entity_createdAt", "keys": [["entityType", 1], ["entityId", 1], ["createdAt", -1]]}
+  ]
+}

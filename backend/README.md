@@ -401,6 +401,38 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   `reopened`, `released`) guarda até 500 entradas. Projeto arquivado → só leitura (422).
 - A migration `0008_releases` cria a collection `releases`.
 
+### Dashboard e métricas
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/dashboard/overview?projectId=` | `reports:read` | Projetos acessíveis e não arquivados (ou só `projectId`, com acesso → senão 404): KPIs, distribuição por estado, sprints ativos com progresso, alertas, "o meu trabalho" e tendência de 30 dias |
+| `GET /api/reports/projects/{id}/metrics` | `reports:read` + acesso | Filtros `sprintId`, `type`, `from`, `to` (datas `YYYY-MM-DD`) |
+| `POST /api/reports/projects/{id}/snapshots` | `projects:manage` (gestor do projeto) | Grava/substitui o snapshot de hoje → 201; projeto arquivado → 422 |
+
+- KPIs: abertas (não `done`), em progresso (`in_progress`, `code_review`, `testing`),
+  bloqueadas por concluir, concluídas, bugs `critical` em aberto, SP em aberto e taxa de testes
+  aprovados = `pass / (pass + fail + blocked)` das execuções dos últimos 30 dias (no overview) ou
+  do período (nas métricas); `null` sem execuções.
+- Alertas (até 10 issues cada, com o total): bloqueadas há mais de 3 dias, sem atualização há
+  mais de 14 dias e bugs críticos sem responsável. "O meu trabalho": até 10 issues abertas
+  atribuídas ao utilizador, por prioridade e depois pela atualização mais recente.
+- Métricas: período por omissão dos últimos 90 dias; `from > to` ou mais de 366 dias → 422
+  `field=from`; `sprintId` de outro projeto → 422 `field=sprintId`. `type` e `sprintId` aplicam-se
+  às métricas de issues (KPIs, distribuição, lead/cycle time, aging, carga); bugs por severidade,
+  QA, releases e tendência são do projeto inteiro.
+- Lead time (criação → conclusão) e cycle time (primeira passagem a `in_progress` no histórico →
+  conclusão) das issues concluídas no período, em dias: média, mediana e p85. Aging das issues
+  abertas em escalões (0–7, 8–30, 31–90, > 90 dias) e as 10 mais antigas. Velocity dos últimos
+  10 sprints fechados. Releases: as 10 mais recentes com o mesmo `quality` do detalhe da release.
+- Carga de trabalho: só trabalho em aberto por responsável (sem responsável em último); não há
+  métricas de desempenho individual.
+- **Snapshots de relatório:** collection `report_snapshots`, um documento por projeto e dia UTC
+  (índice único `projectId`+`day`) com os KPIs e a distribuição por estado. São a fonte das
+  tendências: no overview soma os projetos acessíveis nos últimos 30 dias; nas métricas, o
+  período. Gravados diariamente por `python -m app.cli report-snapshots` (timer systemd em
+  `deployment/systemd/`; projetos arquivados ignorados; código de saída 1 se algum falhar) ou
+  manualmente pelo gestor do projeto. A migration `0009_report_snapshots` cria a collection.
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash

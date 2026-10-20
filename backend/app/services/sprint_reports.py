@@ -60,6 +60,21 @@ def ideal_remaining(day: date, start: date, end: date, committed: float) -> floa
     return _points(committed * (end - day).days / (end - start).days)
 
 
+def velocity_entry(sprint: dict[str, Any]) -> VelocityEntry:
+    """Velocidade e previsibilidade de um sprint fechado (resultado gravado no fecho)."""
+    result = sprint.get("result") or {}
+    committed = sprint.get("committedStoryPoints") or 0
+    committed_completed = result.get("committedCompletedStoryPoints") or 0
+    return VelocityEntry(
+        sprint_id=str(sprint["_id"]),
+        name=sprint["name"],
+        committed_story_points=_points(committed),
+        completed_story_points=_points(result.get("completedStoryPoints") or 0),
+        committed_completed_story_points=_points(committed_completed),
+        predictability_percent=_percent(committed_completed, committed),
+    )
+
+
 class SprintReportService(SprintService):
     def __init__(self, db: Database) -> None:
         super().__init__(db)
@@ -219,21 +234,7 @@ class SprintReportService(SprintService):
             skip=0,
             limit=VELOCITY_SPRINTS,
         )
-        entries = []
-        for item in reversed(closed):
-            result = item.get("result") or {}
-            committed = item.get("committedStoryPoints") or 0
-            committed_completed = result.get("committedCompletedStoryPoints") or 0
-            entries.append(
-                VelocityEntry(
-                    sprint_id=str(item["_id"]),
-                    name=item["name"],
-                    committed_story_points=_points(committed),
-                    completed_story_points=_points(result.get("completedStoryPoints") or 0),
-                    committed_completed_story_points=_points(committed_completed),
-                    predictability_percent=_percent(committed_completed, committed),
-                )
-            )
+        entries = [velocity_entry(item) for item in reversed(closed)]
         average = (
             _points(sum(entry.completed_story_points for entry in entries) / len(entries))
             if entries

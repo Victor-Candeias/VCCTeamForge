@@ -1,0 +1,52 @@
+# VCCTeamForge — snapshot diário dos KPIs por projeto (tendências do dashboard e das métricas).
+# Instalar em /etc/systemd/system/ (deployment/scripts/install.sh); disparado por
+# VCCTeamForge-report-snapshots.timer.
+
+[Unit]
+Description=VCCTeamForge snapshots diários de relatório
+Documentation=file:///opt/VCCTeamForge/deployment/README.md
+After=network-online.target mongodb44.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=vccteamforge
+Group=vccteamforge
+WorkingDirectory=/opt/VCCTeamForge/backend
+Environment=VCCTF_ENV_FILE=/etc/VCCTeamForge/api.env
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/VCCTeamForge/venv/bin/python -m app.cli report-snapshots
+TimeoutStartSec=10min
+UMask=0027
+
+MemoryHigh=256M
+MemoryMax=384M
+TasksMax=32
+
+# Hardening (igual à API; não escreve em disco)
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallErrorNumber=EPERM

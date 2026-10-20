@@ -5,6 +5,7 @@ from app.api.routes import (
     attachments,
     audit,
     auth,
+    dashboard,
     health,
     issues,
     projects,
@@ -24,6 +25,7 @@ api_router.include_router(issues.router)
 api_router.include_router(sprints.router)
 api_router.include_router(qa.router)
 api_router.include_router(releases.router)
+api_router.include_router(dashboard.router)
 api_router.include_router(reports.router)
 api_router.include_router(attachments.router)
 api_router.include_router(audit.router)

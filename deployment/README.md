@@ -15,6 +15,7 @@ Browsers --> Nginx :80/:443 --+-- /        -> /var/www/VCCTeamForge (frontend/di
 | Ficheiro | Destino no servidor |
 |---|---|
 | `systemd/VCCTeamForge-api.service` | `/etc/systemd/system/VCCTeamForge-api.service` |
+| `systemd/VCCTeamForge-report-snapshots.{service,timer}` | `/etc/systemd/system/` (snapshot diário dos KPIs) |
 | `nginx/vccteamforge.conf` (HTTP) ou `nginx/vccteamforge-https.conf` (HTTPS) | `/etc/nginx/sites-available/vccteamforge` |
 | `nginx/vccteamforge-locations.conf`, `nginx/vccteamforge-security-headers.conf` | `/etc/nginx/snippets/` |
 | `env/api.env.example` | `/etc/VCCTeamForge/api.env` (`root:vccteamforge`, `0640`) |
@@ -56,7 +57,7 @@ A API corre a partir do código-fonte (`WorkingDirectory=/opt/VCCTeamForge/backe
    sudo deployment/scripts/install.sh --https    # Nginx em HTTPS (recomendado)
    ```
 
-   Cria o utilizador de sistema `vccteamforge`, as diretorias acima, instala a unidade systemd, o site Nginx (desativando o site `default`) e o `vccteamforge-manage`. Não sobrescreve um `api.env` existente.
+   Cria o utilizador de sistema `vccteamforge`, as diretorias acima, instala as unidades systemd (API e o timer dos snapshots diários, que fica ativo), o site Nginx (desativando o site `default`) e o `vccteamforge-manage`. Não sobrescreve um `api.env` existente.
 
 3. **Configurar** `/etc/VCCTeamForge/api.env` (`sudoedit`): `MONGODB_PASSWORD` e, se o Nginx servir HTTP simples, `COOKIE_SECURE=false` (sem isto o browser não envia o cookie de sessão por HTTP). Com HTTPS, colocar o certificado e a chave em `/etc/ssl/vccteamforge/` (ou ajustar os caminhos) e o `server_name`.
 
@@ -98,6 +99,7 @@ sudo deployment/scripts/deploy.sh
 | Readiness | `curl -s http://127.0.0.1:5000/api/health/ready` |
 | Estado da BD (migrations/índices) | `sudo vccteamforge-manage status` |
 | Anexos órfãos ou em falta no disco | `sudo vccteamforge-manage attachments-check` |
+| Snapshots diários dos KPIs (tendências) | `systemctl list-timers VCCTeamForge-report-snapshots`; manual: `sudo vccteamforge-manage report-snapshots` |
 | Logs do Nginx | `/var/log/nginx/vccteamforge.{access,error}.log` (com `rid=` igual ao `X-Request-ID`) |
 
 ## Deploy local sem root (`deploy-local.sh`)
@@ -121,6 +123,7 @@ O script copia o código, atualiza o venv e o `node_modules` (só quando `requir
 - Configuração em `/opt/vccteamforge/config/api.env` (`0600`), criada na primeira execução a partir de `env/api.env.example`, com as credenciais `MONGODB_*` do `.env` da raiz do repositório e `COOKIE_SECURE=false` (HTTP). Não é sobrescrita depois.
 - Anexos em `/opt/vccteamforge/data/attachments`.
 - Variáveis opcionais: `VCCTF_DEPLOY_ROOT`, `VCCTF_API_PORT` (só na criação do `api.env`), `VCCTF_WEB_PORT`, `VCCTF_ALLOWED_HOSTS` (nomes aceites pelo frontend além de IPs e `localhost`; por omissão o nome da máquina).
+- Snapshots diários dos KPIs: `vccteamforge-report-snapshots.timer` (23:50 UTC, `Persistent=true`); ver com `systemctl --user list-timers`.
 - Operação: `systemctl --user status vccteamforge-api vccteamforge-web`, `journalctl --user -u vccteamforge-api -u vccteamforge-web -f`; CLI: `cd /opt/vccteamforge/backend && VCCTF_ENV_FILE=/opt/vccteamforge/config/api.env ../venv/bin/python -m app.cli status`.
 - Sem Nginx não há TLS nem os cabeçalhos de segurança do snippet; usar apenas numa rede de confiança.
 

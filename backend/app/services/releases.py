@@ -252,7 +252,7 @@ class ReleaseService(_QaService):
             )
         failed = [
             criterion.label
-            for criterion in self._quality(release).criteria
+            for criterion in self.quality_for(release).criteria
             if criterion.enabled and not criterion.passed
         ]
         if failed:
@@ -306,7 +306,8 @@ class ReleaseService(_QaService):
 
     # Qualidade -----------------------------------------------------------------------------
 
-    def _quality(self, release: dict[str, Any]) -> ReleaseQuality:
+    def quality_for(self, release: dict[str, Any]) -> ReleaseQuality:
+        """Qualidade de uma release já autorizada (também usada nas métricas do projeto)."""
         issues = self.issues.find_many_by_ids(release.get("issueIds", []))
         bugs = self.issues.find_many_by_ids(release.get("knownBugIds", []))
         done = sum(1 for issue in issues.values() if issue["status"] == IssueStatus.DONE.value)
@@ -451,7 +452,7 @@ class ReleaseService(_QaService):
             criteria=ReleaseCriteria.model_validate(
                 {**DEFAULT_CRITERIA, **release.get("criteria", {})}
             ),
-            quality=self._quality(release),
+            quality=self.quality_for(release),
             history=[
                 ReleaseHistoryEntry(
                     action=entry["action"],

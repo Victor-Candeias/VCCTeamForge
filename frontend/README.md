@@ -52,7 +52,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 |------|--------|
 | `/projects` | Lista paginada com pesquisa, filtro de estado e "incluir arquivados" |
 | `/projects/new`, `/projects/:projectId/edit` | Formulário partilhado (react-hook-form + zod); a chave só é editável na criação |
-| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Issues, Backlog, Quadro, Sprints, Testes, Releases, Membros; os restantes aparecem desativados até serem implementados |
+| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Issues, Backlog, Quadro, Sprints, Testes, Releases, Métricas, Membros; os restantes aparecem desativados até serem implementados |
 | `/projects/:projectId/members` | Membros; adicionar com pesquisa (`GET /api/users`) e remover (exceto o responsável) |
 
 - As ações de gestão aparecem conforme `usePermission('projects:manage')` e o `canManage`
@@ -152,6 +152,22 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - "Nova release" e "Editar" só aparecem com `releases:manage`, projeto não arquivado e `canEdit`.
 - Os botões de transição vêm de `availableTransitions`; "Rejeitar" e "Reabrir" pedem comentário.
 - Sem itens de checklist na criação, o servidor herda a checklist da release anterior.
+
+## Dashboard e métricas
+
+| Rota | Página |
+|------|--------|
+| `/` | Dashboard: KPIs, distribuição por estado, tendências (snapshots de 30 dias), sprints ativos com progresso, alertas e "O meu trabalho"; filtro por projeto |
+| `/projects/:projectId/metrics` | Separador "Métricas": filtros de sprint, tipo e período; KPIs, distribuição, tendências, velocity, lead/cycle time, aging, issues mais antigas, bugs por severidade, QA, carga de trabalho e qualidade das releases |
+
+- O dashboard só pede `GET /api/dashboard/overview` com `reports:read`. A ordem das secções segue
+  o perfil: gestão (`projects:manage`/`sprints:manage`) mostra alertas primeiro, qualidade
+  (`tests:execute`) alertas com os bugs críticos à cabeça, os restantes "O meu trabalho" primeiro.
+- Gráficos com Recharts (`AnalyticsCharts.tsx`), carregados com `React.lazy` para não pesarem no
+  bundle inicial; cada gráfico tem `role="img"` com `aria-label`.
+- "Gravar snapshot de hoje" só aparece a quem gere o projeto (`canManage`) e com o projeto ativo;
+  os snapshots diários são normalmente gravados pelo timer do servidor.
+- Formatadores em `src/features/analytics/format.ts` (números e percentagens em `pt-PT`).
 
 
 `/admin/audit` (entrada "Auditoria" no menu só com `audit:read`): tabela paginada com filtros

@@ -10,6 +10,7 @@ WEB_ROOT=/var/www/VCCTeamForge
 STATE_DIR=/var/lib/VCCTeamForge
 SERVICE_USER=vccteamforge
 SERVICE_NAME=VCCTeamForge-api.service
+SNAPSHOT_UNIT=VCCTeamForge-report-snapshots
 
 DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -46,7 +47,9 @@ if [[ ! -e "$CONFIG_DIR/api.env" ]]; then
     echo "ATENÇÃO: editar $CONFIG_DIR/api.env (credenciais MongoDB, COOKIE_SECURE) antes do deploy."
 fi
 
-install -o root -g root -m 0644 "$DEPLOY_DIR/systemd/$SERVICE_NAME" "/etc/systemd/system/$SERVICE_NAME"
+for unit in "$SERVICE_NAME" "$SNAPSHOT_UNIT.service" "$SNAPSHOT_UNIT.timer"; do
+    install -o root -g root -m 0644 "$DEPLOY_DIR/systemd/$unit" "/etc/systemd/system/$unit"
+done
 install -o root -g root -m 0755 "$DEPLOY_DIR/scripts/vccteamforge-manage" /usr/local/sbin/vccteamforge-manage
 
 install -d -m 0755 /etc/nginx/snippets /etc/nginx/sites-available /etc/nginx/sites-enabled
@@ -65,6 +68,7 @@ fi
 
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
+systemctl enable --now "$SNAPSHOT_UNIT.timer"
 nginx -t
 
 echo "Instalação concluída. Próximos passos: editar $CONFIG_DIR/api.env e executar deploy.sh."

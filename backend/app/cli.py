@@ -7,6 +7,7 @@ Uso (a partir de ``backend/``)::
     python -m app.cli seed
     python -m app.cli create-user --email admin@exemplo.pt --name "Admin" [--role admin]
     python -m app.cli attachments-check # ficheiros órfãos e anexos sem ficheiro
+    python -m app.cli report-snapshots  # snapshot diário dos KPIs de cada projeto
 
 A password do ``create-user`` é pedida no terminal ou lida de ``VCCTF_NEW_USER_PASSWORD``
 (nunca como argumento, para não ficar no histórico da shell).
@@ -31,6 +32,7 @@ from app.maintenance import indexes, migrations, seeds
 from app.repositories import mongo
 from app.repositories.attachments import AttachmentRepository
 from app.repositories.users import EmailAlreadyExistsError
+from app.services.analytics import ReportSnapshotService
 from app.services.users import UserService
 from app.storage.attachments import AttachmentStorage
 
@@ -104,6 +106,13 @@ def _seed(db: Database, settings: Settings, out: _Output) -> int:
     return 0
 
 
+def _report_snapshots(db: Database, out: _Output) -> int:
+    """Snapshot de hoje (substituído se já existir) para cada projeto não arquivado."""
+    saved, failed = ReportSnapshotService(db).capture_all()
+    out(f"Snapshots de relatório: {saved} gravado(s), {failed} com erro.")
+    return 1 if failed else 0
+
+
 def _attachments_check(db: Database, settings: Settings, out: _Output) -> int:
     """Compara o disco com os metadados ativos; devolve 1 se houver inconsistências."""
     on_disk = set(AttachmentStorage(settings.attachments_path).iter_keys())
@@ -165,6 +174,9 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser(
         "attachments-check", help="Reporta ficheiros de anexos órfãos ou em falta no disco"
     )
+    commands.add_parser(
+        "report-snapshots", help="Grava o snapshot diário de métricas de cada projeto"
+    )
     return parser
 
 
@@ -194,6 +206,8 @@ def main(
             return _create_user(db, args, out)
         if args.command == "attachments-check":
             return _attachments_check(db, settings, out)
+        if args.command == "report-snapshots":
+            return _report_snapshots(db, out)
         return _seed(db, settings, out)
     except (
         migrations.MigrationError,

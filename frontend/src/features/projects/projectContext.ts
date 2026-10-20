@@ -15,7 +15,7 @@ export const projectTabs: Tab[] = [
   { to: 'tests', label: 'Testes' },
   { to: 'releases', label: 'Releases' },
   { to: 'docs', label: 'Documentação', disabled: true },
-  { to: 'metrics', label: 'Métricas', disabled: true },
+  { to: 'metrics', label: 'Métricas' },
 ]
 
 export function useProjectContext() {

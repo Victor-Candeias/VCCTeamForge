@@ -80,6 +80,13 @@ export const routes: RouteObject[] = [
               { path: 'releases/new', element: <ReleaseCreatePage /> },
               { path: 'releases/:releaseId', element: <ReleaseDetailPage /> },
               { path: 'releases/:releaseId/edit', element: <ReleaseEditPage /> },
+              {
+                path: 'metrics',
+                lazy: async () => ({
+                  Component: (await import('@/features/analytics/ProjectMetricsPage'))
+                    .ProjectMetricsPage,
+                }),
+              },
             ],
           },
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },

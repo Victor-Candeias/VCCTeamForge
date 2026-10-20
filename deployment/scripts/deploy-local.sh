@@ -23,6 +23,7 @@ READY_TIMEOUT_SECONDS=60
 
 API_SERVICE=vccteamforge-api.service
 WEB_SERVICE=vccteamforge-web.service
+SNAPSHOT_UNIT=vccteamforge-report-snapshots
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -177,8 +178,36 @@ RestartSec=5
 WantedBy=default.target
 EOF
 
+cat >"$UNIT_DIR/$SNAPSHOT_UNIT.service" <<EOF
+# Gerado por deployment/scripts/deploy-local.sh — não editar (é reescrito em cada deploy).
+[Unit]
+Description=VCCTeamForge snapshots diários de relatório
+
+[Service]
+Type=oneshot
+WorkingDirectory=$DEPLOY_ROOT/backend
+Environment=VCCTF_ENV_FILE=$ENV_FILE
+Environment=PYTHONUNBUFFERED=1
+ExecStart=$DEPLOY_ROOT/venv/bin/python -m app.cli report-snapshots
+EOF
+
+cat >"$UNIT_DIR/$SNAPSHOT_UNIT.timer" <<EOF
+# Gerado por deployment/scripts/deploy-local.sh — não editar (é reescrito em cada deploy).
+[Unit]
+Description=VCCTeamForge snapshots diários de relatório (timer)
+
+[Timer]
+OnCalendar=*-*-* 23:50:00 UTC
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
+EOF
+
 systemctl --user daemon-reload
 systemctl --user enable --quiet "$API_SERVICE" "$WEB_SERVICE"
+systemctl --user enable --now --quiet "$SNAPSHOT_UNIT.timer"
 
 wait_for() {
     local url="$1" service="$2" deadline=$((SECONDS + READY_TIMEOUT_SECONDS))

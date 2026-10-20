@@ -261,7 +261,10 @@ class TestRunService(_QaService):
             self._get_project(user, plan["projectId"])
         except NotFoundError as error:
             raise NotFoundError("Plano de teste não encontrado") from error
+        return self.progress_for(plan)
 
+    def progress_for(self, plan: dict[str, Any]) -> TestPlanProgress:
+        """Progresso de um plano já autorizado (também usado pelas releases)."""
         test_case_ids: list[ObjectId] = plan.get("testCaseIds", [])
         found = self.cases.find_many_by_ids(test_case_ids)
         latest = self.runs.latest_by_case(plan["_id"])

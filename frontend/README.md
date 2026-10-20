@@ -52,7 +52,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 |------|--------|
 | `/projects` | Lista paginada com pesquisa, filtro de estado e "incluir arquivados" |
 | `/projects/new`, `/projects/:projectId/edit` | Formulário partilhado (react-hook-form + zod); a chave só é editável na criação |
-| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Issues, Backlog, Quadro, Sprints, Testes, Membros; os restantes aparecem desativados até serem implementados |
+| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Issues, Backlog, Quadro, Sprints, Testes, Releases, Membros; os restantes aparecem desativados até serem implementados |
 | `/projects/:projectId/members` | Membros; adicionar com pesquisa (`GET /api/users`) e remover (exceto o responsável) |
 
 - As ações de gestão aparecem conforme `usePermission('projects:manage')` e o `canManage`
@@ -140,7 +140,19 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - A página do plano mostra o progresso (executados, pass rate, regressões e último resultado por
   caso) com o botão "Executar" por caso; a página do caso tem "Executar" e "Ver execuções".
 
-## Auditoria
+## Releases
+
+| Rota | Página |
+|------|--------|
+| `/projects/:projectId/releases` | Separador "Releases": lista com pesquisa por versão e filtro de estado |
+| `/projects/:projectId/releases/new` | Criação: versão, data prevista, notas (markdown), issues, bugs conhecidos, planos, checklist e critérios |
+| `/projects/:projectId/releases/:releaseId` | Qualidade e critérios, checklist (marcar itens), workflow com comentário, ligações, notas e histórico |
+| `/projects/:projectId/releases/:releaseId/edit` | Edição (envia `version`), só em `draft`/`ready_for_qa` com `releases:manage` |
+
+- "Nova release" e "Editar" só aparecem com `releases:manage`, projeto não arquivado e `canEdit`.
+- Os botões de transição vêm de `availableTransitions`; "Rejeitar" e "Reabrir" pedem comentário.
+- Sem itens de checklist na criação, o servidor herda a checklist da release anterior.
+
 
 `/admin/audit` (entrada "Auditoria" no menu só com `audit:read`): tabela paginada com filtros
 por ação, entidade e intervalo de datas.

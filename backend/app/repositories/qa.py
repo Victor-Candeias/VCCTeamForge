@@ -86,6 +86,15 @@ class TestPlanRepository(_VersionedRepository):
             raise TestPlanNameExistsError(document.get("name")) from error
         return document
 
+    def find_many_by_ids(self, ids: list[ObjectId]) -> dict[ObjectId, dict[str, Any]]:
+        if not ids:
+            return {}
+        projection = {"name": 1, "status": 1, "projectId": 1, "testCaseIds": 1}
+        return {
+            document["_id"]: document
+            for document in self.collection.find({"_id": {"$in": list(set(ids))}}, projection)
+        }
+
     def names_by_ids(self, ids: list[ObjectId]) -> dict[ObjectId, str]:
         if not ids:
             return {}

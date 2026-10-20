@@ -13,7 +13,7 @@ export const projectTabs: Tab[] = [
   { to: 'board', label: 'Quadro' },
   { to: 'sprints', label: 'Sprints' },
   { to: 'tests', label: 'Testes' },
-  { to: 'releases', label: 'Releases', disabled: true },
+  { to: 'releases', label: 'Releases' },
   { to: 'docs', label: 'Documentação', disabled: true },
   { to: 'metrics', label: 'Métricas', disabled: true },
 ]

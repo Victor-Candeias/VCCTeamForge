@@ -37,6 +37,8 @@
     {"collection": "test_cases", "name": "test_cases_issueIds", "keys": [["issueIds", 1]]},
     {"collection": "test_plans", "name": "test_plans_projectId_nameKey_unique", "keys": [["projectId", 1], ["nameKey", 1]], "options": {"unique": true}},
     {"collection": "test_plans", "name": "test_plans_projectId_createdAt", "keys": [["projectId", 1], ["createdAt", -1]]},
+    {"collection": "releases", "name": "releases_projectId_nameKey_unique", "keys": [["projectId", 1], ["nameKey", 1]], "options": {"unique": true}},
+    {"collection": "releases", "name": "releases_projectId_createdAt", "keys": [["projectId", 1], ["createdAt", -1]]},
 
     {"collection": "test_runs", "name": "test_runs_projectId_executedAt", "keys": [["projectId", 1], ["executedAt", -1]]},
     {"collection": "test_runs", "name": "test_runs_testCaseId_executedAt", "keys": [["testCaseId", 1], ["executedAt", -1]]},

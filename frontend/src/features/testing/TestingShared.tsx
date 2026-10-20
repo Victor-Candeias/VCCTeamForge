@@ -7,7 +7,7 @@ import { NativeSelect } from '@/components/ui/native-select'
 import { IssueStatusBadge } from '@/features/issues/IssueBadges'
 import { useIssues } from '@/features/issues/useIssues'
 import { cn } from '@/lib/utils'
-import type { IssueRef } from '@/services/issues'
+import type { IssueRef, IssueType } from '@/services/issues'
 import {
   testCaseStatusLabels,
   testPlanStatusLabels,
@@ -80,22 +80,32 @@ export function IssueLinks({
   onChange,
   readOnly,
   error,
+  id = 'link-issue',
+  label = 'Issues ligadas',
+  emptyText = 'Nenhuma issue ligada.',
+  placeholder = 'Ligar issue…',
+  types,
 }: {
   projectId: string
   value: IssueRef[]
   onChange: (issues: IssueRef[]) => void
   readOnly: boolean
   error?: string
+  id?: string
+  label?: string
+  emptyText?: string
+  placeholder?: string
+  types?: IssueType[]
 }) {
-  const candidates = useIssues({ projectId, sort: 'number', pageSize: 100 }, !readOnly)
+  const candidates = useIssues({ projectId, type: types, sort: 'number', pageSize: 100 }, !readOnly)
   const selected = new Set(value.map((issue) => issue.id))
   const available = (candidates.data?.items ?? []).filter((issue) => !selected.has(issue.id))
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="link-issue">Issues ligadas</Label>
+      <Label htmlFor={id}>{label}</Label>
       {value.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma issue ligada.</p>
+        <p className="text-sm text-muted-foreground">{emptyText}</p>
       ) : (
         <ul className="space-y-1">
           {value.map((issue) => (
@@ -121,14 +131,14 @@ export function IssueLinks({
       )}
       {!readOnly && (
         <NativeSelect
-          id="link-issue"
+          id={id}
           value=""
           onChange={(event) => {
             const issue = available.find((item) => item.id === event.target.value)
             if (issue) onChange([...value, issue])
           }}
         >
-          <option value="">Ligar issue…</option>
+          <option value="">{placeholder}</option>
           {available.map((issue) => (
             <option key={issue.id} value={issue.id}>
               {issue.key} · {issue.title}

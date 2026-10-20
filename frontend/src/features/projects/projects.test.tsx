@@ -137,7 +137,8 @@ describe('detalhe e membros', () => {
     expect(screen.getByRole('link', { name: 'Membros' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sprints' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Testes' })).toBeInTheDocument()
-    expect(screen.getByText('Releases')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('link', { name: 'Releases' })).toBeInTheDocument()
+    expect(screen.getByText('Métricas')).toHaveAttribute('aria-disabled', 'true')
     expect(screen.queryByRole('button', { name: 'Arquivar' })).not.toBeInTheDocument()
   })
 

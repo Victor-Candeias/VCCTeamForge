@@ -342,9 +342,9 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   maiúsculas → 409 com `field=name`; até 500 casos do mesmo projeto, sem repetições
   (`field=testCaseIds`). Casos `deprecated` não podem ser adicionados, mas os já incluídos mantêm-se.
 - Plano fechado só aceita mudar o `status` (422 com `field=status`); projeto arquivado → só leitura.
-- Nas alterações a textos longos a auditoria regista apenas `{changed: true}`. A ligação de
-  planos a releases fica para o DEV-022. A migration `0005_test_collections` cria as collections
-  `test_cases` e `test_plans`.
+- Nas alterações a textos longos a auditoria regista apenas `{changed: true}`. Os planos são
+  associados a releases em `testPlanIds` da release (ver "Releases"). A migration
+  `0005_test_collections` cria as collections `test_cases` e `test_plans`.
 
 ### Execuções de testes e evidências
 
@@ -370,6 +370,36 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 - Evidências usam as mesmas validações, limites e armazenamento dos anexos (collection
   `attachments` com `testRunId`), e por isso entram no `attachments-check`.
 - Até 20 bugs por execução. A migration `0007_test_runs` cria a collection `test_runs`.
+
+### Releases
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/releases?projectId=` | `releases:read` + acesso | Filtros `status` (repetível) e `q` (versão); `sort` `createdAt`, `name`, `plannedDate` (omissão `-createdAt`); paginado |
+| `POST /api/releases` | `releases:manage` + acesso | `{name, description?, notes?, plannedDate?, issueIds?, knownBugIds?, testPlanIds?, checklist?, criteria?}` → 201; auditoria `release.created` |
+| `GET /api/releases/{id}` | `releases:read` + acesso | Inclui issues, bugs conhecidos, planos, checklist, critérios, `quality`, histórico, `canEdit` e `availableTransitions` |
+| `PATCH /api/releases/{id}` | `releases:manage` | Só em `draft`/`ready_for_qa`; com `version`; auditoria `release.updated` |
+| `POST /api/releases/{id}/transitions` | conforme a transição | `{to, comment?, version}`; auditoria `release.transitioned` |
+
+- `name` é o número da versão (ex.: `1.4.0`): 1–40 caracteres `[0-9A-Za-z._+-]`, único por
+  projeto sem distinção de maiúsculas → 409 com `field=name`. `notes` (markdown) até 20000.
+- Ligações do mesmo projeto: até 500 `issueIds`, 100 `knownBugIds` (só issues `bug`) e 50
+  `testPlanIds` → 422 com o `field` respetivo.
+- Checklist com até 30 itens `{id?, label, required, done}`; quem marcou e quando é definido pelo
+  servidor (`doneBy`, `doneAt`). Sem `checklist` na criação, copia os itens (por marcar) da release
+  mais recente do projeto ou usa a checklist por omissão.
+- Workflow: `draft → ready_for_qa` (`releases:manage`), `ready_for_qa → approved`
+  (`releases:approve`), `approved → released` (`releases:manage`, define `releasedAt`),
+  `ready_for_qa → draft` e `approved → draft` (`releases:manage` ou `releases:approve`, comentário
+  obrigatório → 422 `field=comment`). Transição inválida → 422 `field=to`; `released` é final.
+- A aprovação exige os itens obrigatórios da checklist marcados (422 `field=checklist`) e os
+  critérios ativos cumpridos (422 `field=criteria`): `issuesDone` (issues incluídas `done`),
+  `testsPassed` (há planos e o último resultado de todos os casos é `pass`/`skipped`) e
+  `noOpenCriticalBugs` (nenhum bug `critical` por concluir entre os conhecidos e os incluídos).
+- `quality` agrega issues concluídas, bugs em aberto/críticos e o progresso dos planos (contagens,
+  `passRate`, regressões). O histórico (`created`, `updated`, `submitted`, `approved`, `rejected`,
+  `reopened`, `released`) guarda até 500 entradas. Projeto arquivado → só leitura (422).
+- A migration `0008_releases` cria a collection `releases`.
 
 Primeiro administrador (a password é pedida no terminal):
 

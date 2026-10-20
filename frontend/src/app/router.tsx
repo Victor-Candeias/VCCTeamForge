@@ -16,6 +16,9 @@ import { ProjectLayout } from '@/features/projects/ProjectLayout'
 import { ProjectMembers } from '@/features/projects/ProjectMembers'
 import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { ProjectSummaryPage } from '@/features/projects/ProjectSummaryPage'
+import { ReleaseDetailPage } from '@/features/releases/ReleaseDetailPage'
+import { ReleaseCreatePage, ReleaseEditPage } from '@/features/releases/ReleaseForm'
+import { ReleasesPage } from '@/features/releases/ReleasesPage'
 import { SprintClosePage } from '@/features/sprints/SprintClosePage'
 import { SprintDetailPage } from '@/features/sprints/SprintDetailPage'
 import { SprintCreatePage, SprintEditPage } from '@/features/sprints/SprintForm'
@@ -73,6 +76,10 @@ export const routes: RouteObject[] = [
               { path: 'tests/runs', element: <TestRunsPage /> },
               { path: 'tests/runs/new', element: <TestRunCreatePage /> },
               { path: 'tests/runs/:testRunId', element: <TestRunDetailPage /> },
+              { path: 'releases', element: <ReleasesPage /> },
+              { path: 'releases/new', element: <ReleaseCreatePage /> },
+              { path: 'releases/:releaseId', element: <ReleaseDetailPage /> },
+              { path: 'releases/:releaseId/edit', element: <ReleaseEditPage /> },
             ],
           },
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },

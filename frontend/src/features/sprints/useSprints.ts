@@ -4,8 +4,10 @@ import {
   addSprintIssues,
   createSprint,
   getSprint,
+  getSprintCommitment,
   listSprints,
   removeSprintIssue,
+  startSprint,
   updateSprint,
   type Sprint,
   type SprintFilters,
@@ -15,6 +17,7 @@ export const sprintKeys = {
   all: ['sprints'] as const,
   list: (filters: SprintFilters) => ['sprints', 'list', filters] as const,
   detail: (sprintId: string) => ['sprints', 'detail', sprintId] as const,
+  commitment: (sprintId: string) => ['sprints', 'commitment', sprintId] as const,
 }
 
 export function useSprints(filters: SprintFilters) {
@@ -61,6 +64,7 @@ function useSprintScopeUpdate() {
   return (sprint: Sprint) => {
     update(sprint)
     void queryClient.invalidateQueries({ queryKey: ['issues'] })
+    void queryClient.invalidateQueries({ queryKey: ['sprints', 'commitment', sprint.id] })
   }
 }
 
@@ -77,5 +81,27 @@ export function useRemoveSprintIssue(sprintId: string) {
   return useMutation({
     mutationFn: (issueId: string) => removeSprintIssue(sprintId, issueId),
     onSuccess: update,
+  })
+}
+
+export function useSprintCommitment(sprintId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: sprintKeys.commitment(sprintId),
+    queryFn: () => getSprintCommitment(sprintId),
+    enabled,
+  })
+}
+
+/** Iniciar muda o estado do sprint e cria o compromisso. */
+export function useStartSprint(sprintId: string) {
+  const queryClient = useQueryClient()
+  const update = useSprintCacheUpdate()
+  return useMutation({
+    mutationFn: (version: number) => startSprint(sprintId, version),
+    onSuccess: (sprint) => {
+      update(sprint)
+      void queryClient.invalidateQueries({ queryKey: sprintKeys.commitment(sprintId) })
+      void queryClient.invalidateQueries({ queryKey: ['issues', 'board'] })
+    },
   })
 }

@@ -86,7 +86,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 | Rota | Página |
 |------|--------|
 | `/projects/:projectId/backlog` | Issues sem sprint e por concluir ordenadas por `rank`: arrastar e largar ou botões Topo/Subir/Descer, filtro por tipo e criação rápida no fim |
-| `/projects/:projectId/board` | Quadro Kanban por estado: cartões (`IssueCard`) com tipo, prioridade, responsável e bloqueio, contadores, aviso de truncagem; mover arrastando entre colunas ou pelo menu "Mover para…" |
+| `/projects/:projectId/board` | Quadro Kanban por estado: cartões (`IssueCard`) com tipo, prioridade, responsável e bloqueio, contadores, aviso de truncagem; mover arrastando entre colunas ou pelo menu "Mover para…"; filtro de sprint (`?sprintId=`; sprints ativos/planeados ou "Sem sprint") |
 
 - As mudanças são otimistas: em erro (409/422) a vista reverte, mostra a mensagem e recarrega.
 - O menu e o arrastar só oferecem as transições de `issueTransitions` (espelho do backend);
@@ -98,7 +98,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 |------|--------|
 | `/projects/:projectId/sprints` | Separador "Sprints": lista paginada (estado, datas, duração, issues, story points/capacidade, objetivo) com filtro de estado |
 | `/projects/:projectId/sprints/new` | Criação; sugere `Sprint N+1`, início no dia seguinte ao fim do último sprint (ou hoje) e fim pela duração do projeto |
-| `/projects/:projectId/sprints/:sprintId` | Planeamento: totais (issues, story points vs capacidade, sem estimativa, concluídas), issues do sprint e backlog elegível para adicionar/remover |
+| `/projects/:projectId/sprints/:sprintId` | Planeamento: totais (issues, story points vs capacidade, sem estimativa, concluídas), issues do sprint e backlog elegível para adicionar/remover; iniciar (com confirmação) e compromisso |
 | `/projects/:projectId/sprints/:sprintId/edit` | Edição (envia `version`); num sprint ativo a data de início é só de leitura |
 
 - "Novo sprint" e "Editar" só aparecem com `sprints:manage`, projeto não arquivado e `canEdit`.
@@ -108,6 +108,9 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - No planeamento, o backlog elegível exclui epics e issues concluídas; adicionar/remover só com
   `canEdit`. A estimativa em linha (`EstimateInput`) grava ao sair do campo ou com Enter via
   `PATCH /api/issues/{id}` com `version` (só com `issues:write`) e invalida issues e sprints.
+- "Iniciar sprint" só aparece num sprint `planned` com `canEdit` (desativado sem issues) e pede
+  confirmação com o compromisso. Depois do início, a secção "Compromisso" compara o snapshot
+  inicial com o estado atual (retiradas/adicionadas) e "Ver quadro" abre o quadro do sprint.
 
 ## Testes
 

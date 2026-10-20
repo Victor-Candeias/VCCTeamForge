@@ -78,3 +78,16 @@ def validate_plannable(issue_type: IssueType | str, status: IssueStatus | str) -
         raise SprintRuleError("Um epic não pode ser associado a um sprint", "issueIds")
     if IssueStatus(status) is IssueStatus.DONE:
         raise SprintRuleError("Uma issue concluída não pode ser associada a um sprint", "issueIds")
+
+
+def validate_startable(
+    status: SprintStatus | str, end: date, today: date, issue_count: int
+) -> None:
+    if SprintStatus(status) is not SprintStatus.PLANNED:
+        raise SprintRuleError("Só um sprint planeado pode ser iniciado", "status")
+    if end < today:
+        raise SprintRuleError(
+            "A data de fim já passou: ajuste as datas antes de iniciar", "endDate"
+        )
+    if issue_count == 0:
+        raise SprintRuleError("Associe pelo menos uma issue antes de iniciar o sprint", "issueIds")

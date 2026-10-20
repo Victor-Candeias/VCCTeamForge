@@ -171,13 +171,17 @@ class IssueService:
         return mongo_filter
 
     def board(self, user: User, project_id: ObjectId, query: IssueSearchQuery) -> Board:
-        """Colunas por estado ordenadas por ``rank`` (``done`` só dos últimos dias)."""
+        """Colunas por estado ordenadas por ``rank``.
+
+        ``done`` só mostra os últimos dias, exceto no quadro de um sprint (mostra todas).
+        """
         base = self.build_search_filter(user, replace(query, project_id=project_id, statuses=[]))
         done_since = datetime.now(UTC) - timedelta(days=BOARD_DONE_WINDOW_DAYS)
+        single_sprint = isinstance(base.get("sprintId"), ObjectId)
         columns = []
         for status in IssueStatus:
             column_filter = {**base, "status": status.value}
-            if status is IssueStatus.DONE:
+            if status is IssueStatus.DONE and not single_sprint:
                 column_filter["completedAt"] = {"$gte": done_since}
             documents = self.issues.search(
                 column_filter,
@@ -200,7 +204,7 @@ class IssueService:
         return Board(
             columns=columns,
             column_limit=BOARD_COLUMN_LIMIT,
-            done_window_days=BOARD_DONE_WINDOW_DAYS,
+            done_window_days=None if single_sprint else BOARD_DONE_WINDOW_DAYS,
         )
 
     def project_labels(self, user: User, project_id: ObjectId) -> list[str]:

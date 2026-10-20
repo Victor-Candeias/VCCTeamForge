@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -16,8 +16,14 @@ import { BlockedBadge, IssueStatusBadge, IssueTypeBadge } from '@/features/issue
 import { useIssues } from '@/features/issues/useIssues'
 import { useProjectContext } from '@/features/projects/projectContext'
 import { EstimateInput } from '@/features/sprints/EstimateInput'
+import { SprintCommitment } from '@/features/sprints/SprintCommitment'
 import { SprintStatusBadge } from '@/features/sprints/SprintsPage'
-import { useAddSprintIssues, useRemoveSprintIssue, useSprint } from '@/features/sprints/useSprints'
+import {
+  useAddSprintIssues,
+  useRemoveSprintIssue,
+  useSprint,
+  useStartSprint,
+} from '@/features/sprints/useSprints'
 import { usePermission } from '@/hooks/usePermissions'
 import { mutationErrorMessage } from '@/lib/errors'
 import { formatDate } from '@/services/common'
@@ -132,6 +138,52 @@ function IssueRows({
         ))}
       </TableBody>
     </Table>
+  )
+}
+
+function StartSprint({ sprint }: { sprint: Sprint }) {
+  const [confirming, setConfirming] = useState(false)
+  const start = useStartSprint(sprint.id)
+  const empty = sprint.scope.issueCount === 0
+
+  if (!confirming) {
+    return (
+      <div className="space-y-1 text-right">
+        <Button disabled={empty} onClick={() => setConfirming(true)}>
+          Iniciar sprint
+        </Button>
+        {empty && (
+          <p className="text-xs text-muted-foreground">Associe issues antes de iniciar.</p>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div className="max-w-md space-y-2 rounded-lg border p-3" role="group" aria-label="Iniciar sprint">
+      <p className="text-sm">
+        O compromisso fica registado com {sprint.scope.issueCount} issues e{' '}
+        {formatPoints(sprint.scope.storyPoints)} story points
+        {sprint.scope.unestimatedCount > 0 &&
+          ` (${sprint.scope.unestimatedCount} sem estimativa contam como 0)`}
+        .
+      </p>
+      {start.error && (
+        <Alert variant="destructive">
+          <AlertDescription>{mutationErrorMessage(start.error)}</AlertDescription>
+        </Alert>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" disabled={start.isPending} onClick={() => setConfirming(false)}>
+          Cancelar
+        </Button>
+        <Button
+          disabled={start.isPending}
+          onClick={() => start.mutate(sprint.version, { onSuccess: () => setConfirming(false) })}
+        >
+          {start.isPending ? 'A iniciar…' : 'Confirmar início'}
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -261,7 +313,13 @@ export function SprintDetailPage() {
           </p>
           {data.goal && <p className="max-w-2xl">{data.goal}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-start gap-2">
+          {data.canEdit && data.status === 'planned' && <StartSprint sprint={data} />}
+          {data.status === 'active' && (
+            <Button variant="outline" asChild>
+              <Link to={`/projects/${project.id}/board?sprintId=${data.id}`}>Ver quadro</Link>
+            </Button>
+          )}
           {data.canEdit && (
             <Button variant="outline" asChild>
               <Link to={`/projects/${project.id}/sprints/${data.id}/edit`}>Editar</Link>
@@ -273,6 +331,7 @@ export function SprintDetailPage() {
         </div>
       </div>
       <PlanningTotals sprint={data} />
+      <SprintCommitment sprint={data} />
       <SprintPlanning sprint={data} />
     </div>
   )

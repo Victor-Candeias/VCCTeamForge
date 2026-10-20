@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { NativeSelect } from '@/components/ui/native-select'
 import { IssueCard } from '@/features/issues/IssueCard'
 import { moveErrorMessage, useBoard, useMoveIssueStatus } from '@/features/issues/useBoard'
 import { useProjectContext } from '@/features/projects/projectContext'
+import { useSprints } from '@/features/sprints/useSprints'
 import { usePermission } from '@/hooks/usePermissions'
 import {
   issueStatusLabels,
@@ -22,9 +24,18 @@ export function BoardPage() {
   const canWrite = usePermission('issues:write') && project.status !== 'archived'
   const [type, setType] = useState<IssueType | ''>('')
   const [mine, setMine] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const sprintId = searchParams.get('sprintId') ?? ''
+  const openSprints = useSprints({
+    projectId: project.id,
+    status: ['active', 'planned'],
+    sort: 'startDate',
+    pageSize: 50,
+  })
   const params: BoardParams = {
     assigneeId: mine ? ['me'] : undefined,
     type: type ? [type] : undefined,
+    sprintId: sprintId || undefined,
   }
   const board = useBoard(project.id, params)
   const moveStatus = useMoveIssueStatus()
@@ -65,6 +76,26 @@ export function BoardPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-4">
+        <label className="space-y-1 text-sm">
+          <span className="block font-medium">Sprint</span>
+          <NativeSelect
+            value={sprintId}
+            onChange={(event) =>
+              setSearchParams(event.target.value ? { sprintId: event.target.value } : {}, {
+                replace: true,
+              })
+            }
+          >
+            <option value="">Todas as issues</option>
+            {openSprints.data?.items.map((sprint) => (
+              <option key={sprint.id} value={sprint.id}>
+                {sprint.name}
+                {sprint.status === 'active' ? ' (ativo)' : ''}
+              </option>
+            ))}
+            <option value="none">Sem sprint</option>
+          </NativeSelect>
+        </label>
         <label className="space-y-1 text-sm">
           <span className="block font-medium">Tipo</span>
           <NativeSelect
@@ -128,7 +159,7 @@ export function BoardPage() {
                     {total}
                   </span>
                 </h2>
-                {column.status === 'done' && (
+                {column.status === 'done' && board.data.doneWindowDays !== null && (
                   <p className="px-1 text-xs text-muted-foreground">
                     Últimos {board.data.doneWindowDays} dias
                   </p>

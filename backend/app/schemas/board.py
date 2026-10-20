@@ -31,4 +31,5 @@ class BoardColumn(ApiModel):
 class Board(ApiModel):
     columns: list[BoardColumn]
     column_limit: int
-    done_window_days: int
+    # ``None`` no quadro de um sprint: a coluna ``done`` mostra todas as concluídas.
+    done_window_days: int | None

@@ -6,7 +6,15 @@ from app.domain.permissions import Permission
 from app.domain.sprints import SprintStatus
 from app.domain.users import User
 from app.schemas.common import Page, PageParams, parse_sort
-from app.schemas.sprints import SprintCreate, SprintIssuesAdd, SprintResponse, SprintUpdate
+from app.schemas.sprints import (
+    SprintCommitment,
+    SprintCreate,
+    SprintIssuesAdd,
+    SprintResponse,
+    SprintStart,
+    SprintUpdate,
+)
+from app.services.sprint_lifecycle import SprintLifecycleService
 from app.services.sprint_planning import SprintPlanningService
 from app.services.sprints import DEFAULT_SPRINT_SORT, SPRINT_SORT_FIELDS, SprintService
 
@@ -22,6 +30,10 @@ def get_sprint_service(db: Database = Depends(get_db)) -> SprintService:
 
 def get_planning_service(db: Database = Depends(get_db)) -> SprintPlanningService:
     return SprintPlanningService(db)
+
+
+def get_lifecycle_service(db: Database = Depends(get_db)) -> SprintLifecycleService:
+    return SprintLifecycleService(db)
 
 
 @router.get("", response_model=Page[SprintResponse])
@@ -95,3 +107,24 @@ def remove_sprint_issue(
     return service.remove_issue(
         user, parse_object_id(sprint_id, "Sprint"), parse_object_id(issue_id, "Issue")
     )
+
+
+@router.post("/{sprint_id}/start", response_model=SprintResponse)
+def start_sprint(
+    sprint_id: str,
+    data: SprintStart,
+    user: User = Depends(can_manage),
+    service: SprintLifecycleService = Depends(get_lifecycle_service),
+) -> SprintResponse:
+    return service.start(user, parse_object_id(sprint_id, "Sprint"), data)
+
+
+@router.get("/{sprint_id}/commitment", response_model=SprintCommitment)
+def get_sprint_commitment(
+    sprint_id: str,
+    response: Response,
+    user: User = Depends(can_read),
+    service: SprintLifecycleService = Depends(get_lifecycle_service),
+) -> SprintCommitment:
+    response.headers["Cache-Control"] = "no-store"
+    return service.commitment(user, parse_object_id(sprint_id, "Sprint"))

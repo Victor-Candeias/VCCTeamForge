@@ -12,6 +12,13 @@ class SprintNameExistsError(Exception):
     pass
 
 
+class ActiveSprintExistsError(Exception):
+    """Violação do índice único parcial: já há um sprint ativo no projeto."""
+
+
+ACTIVE_INDEX = "sprints_projectId_active_unique"
+
+
 class SprintRepository(MongoRepository):
     collection_name = "sprints"
 
@@ -78,3 +85,30 @@ class SprintRepository(MongoRepository):
             )
         except DuplicateKeyError as error:
             raise SprintNameExistsError(set_fields.get("name")) from error
+
+    def find_active(self, project_id: ObjectId) -> dict[str, Any] | None:
+        return self.collection.find_one({"projectId": project_id, "status": "active"})
+
+    def transition(
+        self,
+        sprint_id: ObjectId,
+        version: int,
+        *,
+        from_status: str,
+        now: datetime,
+        set_fields: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Muda de estado só se ``version`` e ``from_status`` coincidirem.
+
+        Devolve o documento atualizado ou ``None`` se o sprint mudou entretanto.
+        """
+        try:
+            return self.collection.find_one_and_update(
+                {"_id": sprint_id, "version": version, "status": from_status},
+                {"$set": {**set_fields, "updatedAt": now}, "$inc": {"version": 1}},
+                return_document=ReturnDocument.AFTER,
+            )
+        except DuplicateKeyError as error:
+            if ACTIVE_INDEX in str(error):
+                raise ActiveSprintExistsError from error
+            raise

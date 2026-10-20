@@ -18,7 +18,7 @@ status: active
 |---|---|---|---|---|---|---|---|---|---|
 | DEV-015 | Criar e editar sprints | done | 2026-10-20 | developer | high | 2026-10-20 |  | fase-2-projetos-issues/DEV-009 | [DEV-015](../specs/fase-3-scrum/dev-015-spec.md) |
 | DEV-016 | Planeamento e estimativas | done | 2026-10-20 | developer | high | 2026-10-20 |  | fase-2-projetos-issues/DEV-010, DEV-015 | [DEV-016](../specs/fase-3-scrum/dev-016-spec.md) |
-| DEV-017 | Início e snapshot do compromisso | backlog | 2026-10-20 | developer | high |  |  | DEV-016 |  |
+| DEV-017 | Início e snapshot do compromisso | done | 2026-10-20 | developer | high | 2026-10-20 |  | DEV-016 | [DEV-017](../specs/fase-3-scrum/dev-017-spec.md) |
 | DEV-018 | Fecho e transporte de issues | backlog | 2026-10-20 | developer | high |  |  | DEV-017 |  |
 | DEV-019 | Dashboard de sprint e burndown | backlog | 2026-10-20 | developer | high |  |  | DEV-017 |  |
 <!-- /maestru:work-items-list -->

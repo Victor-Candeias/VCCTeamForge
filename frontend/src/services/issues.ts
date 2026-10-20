@@ -188,10 +188,11 @@ export type BoardColumn = {
 export type Board = {
   columns: BoardColumn[]
   columnLimit: number
-  doneWindowDays: number
+  /** `null` no quadro de um sprint: a coluna "Concluído" mostra todas as concluídas. */
+  doneWindowDays: number | null
 }
 
-export type BoardParams = Pick<IssueSearchParams, 'assigneeId' | 'type' | 'label' | 'q'>
+export type BoardParams = Pick<IssueSearchParams, 'assigneeId' | 'type' | 'label' | 'q' | 'sprintId'>
 
 export function getBoard(projectId: string, params: BoardParams = {}) {
   return apiFetch<Board>(`/projects/${projectId}/board${toQueryString(params)}`)

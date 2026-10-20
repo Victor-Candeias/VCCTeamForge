@@ -304,3 +304,118 @@ describe('planeamento do sprint', () => {
     expect(screen.queryByLabelText('Story points de APP-1')).not.toBeInTheDocument()
   })
 })
+
+describe('início do sprint', () => {
+  const scope = {
+    issueCount: 2,
+    storyPoints: 8,
+    unestimatedCount: 1,
+    completedIssueCount: 0,
+    completedStoryPoints: 0,
+  }
+
+  it('pede confirmação, envia a versão e mostra erros', async () => {
+    const bodies: unknown[] = []
+    mockApi({
+      ...csrfHandler,
+      'GET /api/users/me': () => jsonResponse(sprintManager),
+      'GET /api/projects/p1': () => jsonResponse(testProject()),
+      'GET /api/sprints/s1': () => jsonResponse(testSprint({ scope, version: 3 })),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([], 1, 100)),
+      [BACKLOG]: () => jsonResponse(pageOf([], 1, 100)),
+      'POST /api/sprints/s1/start': (init) => {
+        bodies.push(JSON.parse(String(init.body)))
+        return jsonResponse(
+          { title: 'Regra', detail: 'Já existe um sprint ativo neste projeto', field: 'status' },
+          422,
+        )
+      },
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    await user.click(await screen.findByRole('button', { name: 'Iniciar sprint' }))
+    expect(screen.getByText(/2 issues e 8 story points \(1 sem estimativa contam como 0\)/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Confirmar início' }))
+
+    expect(await screen.findByText(/Já existe um sprint ativo/)).toBeInTheDocument()
+    expect(bodies).toEqual([{ version: 3 }])
+  })
+
+  it('não deixa iniciar um sprint vazio', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(sprintManager),
+      'GET /api/projects/p1': () => jsonResponse(testProject()),
+      'GET /api/sprints/s1': () => jsonResponse(testSprint()),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([], 1, 100)),
+      [BACKLOG]: () => jsonResponse(pageOf([], 1, 100)),
+    })
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    expect(await screen.findByRole('button', { name: 'Iniciar sprint' })).toBeDisabled()
+    expect(screen.getByText('Associe issues antes de iniciar.')).toBeInTheDocument()
+  })
+
+  it('mostra o compromisso de um sprint ativo e a ligação ao quadro', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(sprintManager),
+      'GET /api/projects/p1': () => jsonResponse(testProject()),
+      'GET /api/sprints/s1': () =>
+        jsonResponse(
+          testSprint({ status: 'active', startedAt: '2099-01-02T09:00:00Z', scope, version: 2 }),
+        ),
+      'GET /api/sprints/s1/commitment': () =>
+        jsonResponse({
+          sprintId: 's1',
+          takenAt: '2099-01-02T09:00:00Z',
+          issueCount: 2,
+          storyPoints: 8,
+          unestimatedCount: 0,
+          removedCount: 1,
+          addedCount: 1,
+          addedStoryPoints: 2,
+          issues: [
+            {
+              issueId: 'i1',
+              key: 'APP-1',
+              title: 'Login com SSO',
+              type: 'story',
+              status: 'todo',
+              storyPoints: 5,
+              currentStatus: 'in_progress',
+              currentStoryPoints: 8,
+              inSprint: true,
+            },
+            {
+              issueId: 'i2',
+              key: 'APP-2',
+              title: 'Logout',
+              type: 'story',
+              status: 'todo',
+              storyPoints: 3,
+              currentStatus: 'todo',
+              currentStoryPoints: 3,
+              inSprint: false,
+            },
+          ],
+          added: [
+            { issueId: 'i3', key: 'APP-3', title: 'Perfil', type: 'task', status: 'todo', storyPoints: 2 },
+          ],
+        }),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([], 1, 100)),
+      [BACKLOG]: () => jsonResponse(pageOf([], 1, 100)),
+    })
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    expect(await screen.findByRole('heading', { name: 'Compromisso' })).toBeInTheDocument()
+    expect(screen.getByText(/1 adicionadas \(2 SP\) e 1\s+retiradas/)).toBeInTheDocument()
+    expect(screen.getByText('5 → 8')).toBeInTheDocument()
+    expect(screen.getByText('(retirada)')).toBeInTheDocument()
+    expect(screen.getByText('(adicionada)')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Iniciar sprint' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver quadro' })).toHaveAttribute(
+      'href',
+      '/projects/p1/board?sprintId=s1',
+    )
+  })
+})

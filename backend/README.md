@@ -244,7 +244,8 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   outro projeto ou a própria issue → 422 com `field`. O novo rank é o ponto médio; se o
   intervalo for < 1e-6, os ranks do projeto são renormalizados (passo 1024) e o cálculo repete.
 - **Quadro:** uma coluna por estado (`todo…done`) ordenada por `rank`, até 200 issues por
-  coluna (`total` e `truncated`); `done` só mostra as concluídas nos últimos 14 dias. Mover no
+  coluna (`total` e `truncated`); `done` só mostra as concluídas nos últimos 14 dias, exceto
+  com `sprintId` de um sprint (mostra todas as concluídas do sprint e `doneWindowDays` é `null`). Mover no
   quadro usa `PATCH /api/issues/{id}` (`status` + `version`, transições validadas).
 - A migration `0003_issue_rank` atribui `rank` às issues existentes sem rank (por `number`).
 
@@ -258,6 +259,8 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 | `PATCH /api/sprints/{id}` | `sprints:manage` + acesso | `{name?, goal?, startDate?, endDate?, capacityStoryPoints?, version}`; auditoria `sprint.updated` |
 | `POST /api/sprints/{id}/issues` | `sprints:manage` + acesso | `{issueIds}` (1–50) → sprint atualizado; auditoria `sprint.issues_added` |
 | `DELETE /api/sprints/{id}/issues/{issueId}` | `sprints:manage` + acesso | Devolve a issue ao backlog → sprint atualizado; auditoria `sprint.issue_removed` |
+| `POST /api/sprints/{id}/start` | `sprints:manage` + acesso | `{version}` → sprint `active`; auditoria `sprint.started` |
+| `GET /api/sprints/{id}/commitment` | `projects:read` + acesso | Compromisso congelado no início + issues retiradas/adicionadas depois; 404 se não iniciado |
 
 - Estados `planned`, `active`, `closed` (iniciar no DEV-017, fechar no DEV-018). Sprints novos
   ficam `planned`.
@@ -278,6 +281,15 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   está no sprint não faz nada.
 - Cada mudança é condicional ao `sprintId` atual da issue (409 se mudou entretanto), incrementa
   a `version` da issue e regista no histórico a alteração `sprintId`.
+- **Início (DEV-017):** só sprints `planned` (422 `field=status`), com pelo menos uma issue
+  (422 `field=issueIds`) e `endDate` ≥ hoje (422 `field=endDate`). Um sprint ativo por projeto:
+  pré-verificação (422 `field=status` com `sprintId`) e índice único parcial
+  `sprints_projectId_active_unique` para pedidos concorrentes. Grava `startedAt`, `startedBy`,
+  `committedIssueCount` e `committedStoryPoints` (sem estimativa conta 0).
+- O compromisso fica em `sprint_snapshots` (`kind: "commitment"`, `day`, `issues[]` com estado e
+  story points no início, `totals`), único por `(sprintId, kind, day)`. Sem transações: primeiro
+  a transição condicional do sprint, depois o snapshot; se o snapshot falhar o sprint volta a
+  `planned`. A migration `0006_sprint_snapshots` cria a collection.
 
 ### Casos e planos de teste
 

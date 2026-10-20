@@ -1,5 +1,6 @@
 import { apiFetch, toQueryString } from '@/services/apiClient'
 import type { Page } from '@/services/common'
+import type { IssueStatus, IssueType } from '@/services/issues'
 
 export type SprintStatus = 'planned' | 'active' | 'closed'
 
@@ -36,6 +37,40 @@ export type Sprint = {
   updatedAt: string
   version: number
   canEdit: boolean
+}
+
+export type CommittedIssue = {
+  issueId: string
+  key: string
+  title: string
+  type: IssueType
+  status: IssueStatus
+  storyPoints: number | null
+  currentStatus: IssueStatus | null
+  currentStoryPoints: number | null
+  inSprint: boolean
+}
+
+export type AddedIssue = {
+  issueId: string
+  key: string
+  title: string
+  type: IssueType
+  status: IssueStatus
+  storyPoints: number | null
+}
+
+export type SprintCommitment = {
+  sprintId: string
+  takenAt: string
+  issueCount: number
+  storyPoints: number
+  unestimatedCount: number
+  removedCount: number
+  addedCount: number
+  addedStoryPoints: number
+  issues: CommittedIssue[]
+  added: AddedIssue[]
 }
 
 export type SprintFilters = {
@@ -82,6 +117,17 @@ export function addSprintIssues(sprintId: string, issueIds: string[]) {
 
 export function removeSprintIssue(sprintId: string, issueId: string) {
   return apiFetch<Sprint>(`/sprints/${sprintId}/issues/${issueId}`, { method: 'DELETE' })
+}
+
+export function startSprint(sprintId: string, version: number) {
+  return apiFetch<Sprint>(`/sprints/${sprintId}/start`, {
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  })
+}
+
+export function getSprintCommitment(sprintId: string) {
+  return apiFetch<SprintCommitment>(`/sprints/${sprintId}/commitment`)
 }
 
 /** Soma dias a uma data `AAAA-MM-DD` (em UTC, sem efeitos de fuso horário). */

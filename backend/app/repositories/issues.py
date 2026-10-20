@@ -86,6 +86,11 @@ class IssueRepository(MongoRepository):
         ]
         return {row.pop("_id"): row for row in self.collection.aggregate(pipeline)}
 
+    def find_in_sprint(
+        self, sprint_id: ObjectId, projection: dict[str, int] | None = None
+    ) -> list[dict[str, Any]]:
+        return list(self.collection.find({"sprintId": sprint_id}, projection).sort("rank", 1))
+
     def count_in_sprint(self, sprint_id: ObjectId) -> int:
         return self.collection.count_documents({"sprintId": sprint_id})
 

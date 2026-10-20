@@ -61,6 +61,28 @@ const backlogKey =
   '&status=code_review&status=testing&sort=rank&pageSize=100'
 
 describe('quadro Kanban', () => {
+  it('filtra por sprint a partir do URL e mostra todas as concluídas do sprint', async () => {
+    const sprint = { id: 's1', name: 'Sprint 3', status: 'active' }
+    mockApi({
+      ...projectHandlers,
+      'GET /api/sprints?projectId=p1&status=active&status=planned&sort=startDate&pageSize=50': () =>
+        jsonResponse(pageOf([sprint], 1, 50)),
+      [`${boardKey}?sprintId=s1`]: () =>
+        jsonResponse({ ...boardOf(summary('i1', { sprintId: 's1' })), doneWindowDays: null }),
+      [boardKey]: () => jsonResponse(boardOf(summary('i2'))),
+    })
+    const user = userEvent.setup()
+    const { router } = renderRoutes(routes, '/projects/p1/board?sprintId=s1')
+
+    expect(await screen.findByText('Tarefa 1')).toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: 'Sprint 3 (ativo)' })).toBeInTheDocument()
+    expect(screen.queryByText(/Últimos/)).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Sprint'), '')
+    expect(await screen.findByText('Tarefa 2')).toBeInTheDocument()
+    expect(router.state.location.search).toBe('')
+  })
+
   it('move uma issue pelo menu "Mover para" e mostra impedimentos', async () => {
     let issue = summary('i1')
     let body: Record<string, unknown> = {}

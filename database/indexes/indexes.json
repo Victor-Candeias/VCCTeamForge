@@ -28,6 +28,8 @@
     {"collection": "sprints", "name": "sprints_projectId_status", "keys": [["projectId", 1], ["status", 1]]},
     {"collection": "sprints", "name": "sprints_projectId_nameKey_unique", "keys": [["projectId", 1], ["nameKey", 1]], "options": {"unique": true}},
     {"collection": "sprints", "name": "sprints_projectId_startDate", "keys": [["projectId", 1], ["startDate", -1]]},
+    {"collection": "sprints", "name": "sprints_projectId_active_unique", "keys": [["projectId", 1]], "options": {"unique": true, "partialFilterExpression": {"status": "active"}}},
+    {"collection": "sprint_snapshots", "name": "sprint_snapshots_sprintId_kind_day_unique", "keys": [["sprintId", 1], ["kind", 1], ["day", 1]], "options": {"unique": true}},
 
     {"collection": "test_cases", "name": "test_cases_projectId_number_unique", "keys": [["projectId", 1], ["number", 1]], "options": {"unique": true}},
     {"collection": "test_cases", "name": "test_cases_projectId_status", "keys": [["projectId", 1], ["status", 1]]},

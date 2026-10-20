@@ -30,8 +30,8 @@ Desenvolver uma aplicação web interna para gestão de projetos de software, di
 | Formulários | React Hook Form, Zod | Validação no cliente; repetir no servidor |
 | Kanban | dnd-kit | Drag-and-drop acessível |
 | Gráficos | Recharts | Dashboards |
-| Backend | ASP.NET Core Web API | Monólito modular; versão compatível com Linux/CPU |
-| Persistência | MongoDB 4.4 | Driver .NET compatível a validar antes de fixar versões |
+| Backend | Python, FastAPI, Pydantic, Uvicorn | Monólito modular; API síncrona; versão de Python compatível com o Linux/CPU |
+| Persistência | MongoDB 4.4 | PyMongo (síncrono); versão compatível com MongoDB 4.4 a validar antes de fixar versões |
 | Web server | Nginx | Reverse proxy e estáticos |
 | Serviços | systemd | Arranque automático e recuperação |
 | Anexos | Sistema de ficheiros | Metadados na BD |
@@ -51,7 +51,7 @@ mongod --version
 systemctl status mongodb44.service
 ```
 
-Confirmar arquitetura do processador, glibc, RAM, disco, versão de .NET suportada e compatibilidade do driver com MongoDB 4.4. Não assumir que a versão mais recente do driver suporta o servidor legado.
+Confirmar arquitetura do processador, glibc, RAM, disco, versão de Python suportada e compatibilidade do PyMongo com MongoDB 4.4. Não assumir que a versão mais recente do driver suporta o servidor legado.
 
 ## 3. Perfis e permissões
 
@@ -278,7 +278,7 @@ Prefixo: `/api`.
 | GET | `/reports/sprints/{id}` | Métricas da sprint |
 | GET | `/reports/export` | Exportação parametrizada |
 
-**Convenções:** validação no backend, respostas `ProblemDetails`, paginação e ordenação com limites, códigos HTTP adequados, auditoria das mutações, autorização por projeto e documentação OpenAPI acessível apenas internamente.
+**Convenções:** validação no backend, erros no formato RFC 7807 (`application/problem+json`), paginação e ordenação com limites, códigos HTTP adequados, auditoria das mutações, autorização por projeto e documentação OpenAPI acessível apenas internamente.
 
 ## 7. Estrutura do repositório
 
@@ -299,11 +299,15 @@ VCCTeamForge/
 │       ├── hooks/
 │       └── services/
 ├── backend/
-│   ├── VCCTeamForge.Api/
-│   ├── VCCTeamForge.Application/
-│   ├── VCCTeamForge.Domain/
-│   ├── VCCTeamForge.Infrastructure/
-│   └── VCCTeamForge.Tests/
+│   ├── app/
+│   │   ├── api/             # routers FastAPI
+│   │   ├── services/        # lógica de aplicação
+│   │   ├── domain/          # entidades e regras
+│   │   ├── repositories/    # acesso PyMongo
+│   │   ├── schemas/         # modelos Pydantic (DTOs)
+│   │   └── main.py
+│   ├── tests/
+│   └── pyproject.toml
 ├── database/
 │   ├── indexes/
 │   ├── migrations/
@@ -315,7 +319,7 @@ VCCTeamForge/
 └── docs/
 ```
 
-**Backend:** Controllers → Application Services → Domain → Repositories/Infrastructure. Não expor diretamente os documentos de persistência como contratos da API; usar DTOs.
+**Backend:** Routers → Services → Domain → Repositories (PyMongo). Não expor diretamente os documentos de persistência como contratos da API; usar schemas Pydantic (DTOs).
 
 ## 8. Deployment local
 
@@ -325,7 +329,7 @@ Browsers na LAN
        v
 Nginx (80/443, endereço LAN)
        |-- /       -> frontend estático
-       +-- /api   -> 127.0.0.1:5000 (ASP.NET Core)
+       +-- /api   -> 127.0.0.1:5000 (FastAPI/Uvicorn)
                                |
                                v
                       127.0.0.1:27017
@@ -333,7 +337,7 @@ Nginx (80/443, endereço LAN)
 ```
 
 - Publicar o frontend como estáticos no Nginx.
-- Publicar a API para a arquitetura e runtime compatíveis com o Linux.
+- Instalar a API num virtualenv com dependências fixas (`requirements.txt`/lock) e executá-la com Uvicorn (ou Gunicorn com workers Uvicorn), com poucos workers para limitar a RAM.
 - Executar a API com utilizador de sistema dedicado, através de `VCCTeamForge-api.service`.
 - Usar variáveis de ambiente ou ficheiro de configuração protegido para segredos.
 - Não abrir a porta 27017 à rede; manter `bindIp` no loopback se API e BD estiverem no mesmo computador.
@@ -344,8 +348,9 @@ Nginx (80/443, endereço LAN)
 ### Configuração exemplificativa da API
 
 ```dotenv
-ASPNETCORE_ENVIRONMENT=Production
-ASPNETCORE_URLS=http://127.0.0.1:5000
+APP_ENV=production
+APP_HOST=127.0.0.1
+APP_PORT=5000
 MONGODB_HOST=127.0.0.1
 MONGODB_PORT=27017
 MONGODB_DATABASE=VCCTeamForgeDB

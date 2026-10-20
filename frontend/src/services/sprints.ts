@@ -18,6 +18,22 @@ export type SprintScope = {
   completedStoryPoints: number
 }
 
+export type SprintResult = {
+  completedIssueCount: number
+  completedStoryPoints: number
+  carriedOverIssueCount: number
+  carriedOverStoryPoints: number
+  carryOverSprintId: string | null
+  committedCompletedIssueCount: number
+  committedCompletedStoryPoints: number
+}
+
+export type SprintRetrospective = {
+  wentWell: string
+  toImprove: string
+  actions: string
+}
+
 export type Sprint = {
   id: string
   projectId: string
@@ -33,6 +49,8 @@ export type Sprint = {
   committedIssueCount: number | null
   startedAt: string | null
   closedAt: string | null
+  result: SprintResult | null
+  retrospective: SprintRetrospective | null
   createdAt: string
   updatedAt: string
   version: number
@@ -123,6 +141,19 @@ export function startSprint(sprintId: string, version: number) {
   return apiFetch<Sprint>(`/sprints/${sprintId}/start`, {
     method: 'POST',
     body: JSON.stringify({ version }),
+  })
+}
+
+export type SprintCloseInput = {
+  version: number
+  carryOverSprintId: string | null
+  retrospective: SprintRetrospective
+}
+
+export function closeSprint(sprintId: string, input: SprintCloseInput) {
+  return apiFetch<Sprint>(`/sprints/${sprintId}/close`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   })
 }
 

@@ -1,4 +1,4 @@
-"""Ciclo de vida do sprint: início com snapshot do compromisso (DEV-017).
+"""Ciclo de vida do sprint: início com snapshot do compromisso (DEV-017) e fecho (DEV-018).
 
 Sem transações (MongoDB 4.4 standalone): a transição de estado é condicional à versão e ao
 estado; se o snapshot falhar depois da transição, o sprint volta ao estado anterior.
@@ -12,26 +12,36 @@ from bson import ObjectId
 from pymongo.database import Database
 from pymongo.errors import PyMongoError
 
-from app.core.errors import BusinessRuleError, ForbiddenError, NotFoundError
+from app.core.errors import BusinessRuleError, ConflictError, ForbiddenError, NotFoundError
 from app.core.logging import request_id_var
-from app.domain.sprints import SprintRuleError, SprintStatus, can_manage_sprints, validate_startable
+from app.domain.issues import IssueStatus
+from app.domain.sprints import (
+    SprintRuleError,
+    SprintStatus,
+    can_manage_sprints,
+    validate_closable,
+    validate_startable,
+)
 from app.domain.users import User
 from app.repositories.sprint_snapshots import SprintSnapshotRepository
 from app.repositories.sprints import ActiveSprintExistsError
 from app.schemas.sprints import (
     AddedIssue,
     CommittedIssue,
+    SprintClose,
     SprintCommitment,
     SprintResponse,
     SprintStart,
 )
+from app.services.common import jsonable, object_id_or_422
+from app.services.sprint_planning import SprintPlanningService
 from app.services.sprint_snapshots import SNAPSHOT_PROJECTION, SnapshotKind, snapshot_document
-from app.services.sprints import SprintService, _rule_error
+from app.services.sprints import _rule_error
 
 logger = logging.getLogger(__name__)
 
 
-class SprintLifecycleService(SprintService):
+class SprintLifecycleService(SprintPlanningService):
     def __init__(self, db: Database) -> None:
         super().__init__(db)
         self.snapshots = SprintSnapshotRepository(db)
@@ -87,6 +97,54 @@ class SprintLifecycleService(SprintService):
                 "committedStoryPoints": totals["storyPoints"],
             },
         )
+        return self.to_response(user, project, updated)
+
+    # Fecho ---------------------------------------------------------------------------------
+
+    def close(self, user: User, sprint_id: ObjectId, data: SprintClose) -> SprintResponse:
+        sprint, project = self._get_manageable(user, sprint_id)
+        self._check_version(sprint, data.version)
+        try:
+            validate_closable(sprint["status"])
+        except SprintRuleError as error:
+            raise _rule_error(error) from error
+        target = self._carry_over_target(sprint, data.carry_over_sprint_id)
+
+        issues = self.issues.find_in_sprint(sprint_id, SNAPSHOT_PROJECTION)
+        result = self._result(sprint, issues, target)
+        retrospective = {
+            "wentWell": data.retrospective.went_well.strip(),
+            "toImprove": data.retrospective.to_improve.strip(),
+            "actions": data.retrospective.actions.strip(),
+        }
+        now = datetime.now(UTC)
+        updated = self.sprints.transition(
+            sprint_id,
+            data.version,
+            from_status=SprintStatus.ACTIVE,
+            now=now,
+            set_fields={
+                "status": SprintStatus.CLOSED.value,
+                "closedAt": now,
+                "closedBy": user.id,
+                "result": result,
+                "retrospective": retrospective,
+            },
+        )
+        updated = self._require_updated(updated, sprint_id)
+
+        try:
+            self.snapshots.save(snapshot_document(updated, issues, SnapshotKind.CLOSING, now))
+        except PyMongoError:
+            self._revert_close(updated)
+            raise
+
+        target_id = target["_id"] if target else None
+        for issue in issues:
+            if issue["status"] != IssueStatus.DONE:
+                self._carry_over(user, issue, target_id, now)
+
+        self._audit("sprint.closed", user, project, updated, now, {"result": jsonable(result)})
         return self.to_response(user, project, updated)
 
     # Compromisso ---------------------------------------------------------------------------
@@ -182,6 +240,84 @@ class SprintLifecycleService(SprintService):
                 }
         issues = self.issues.find_in_sprint(sprint["_id"], SNAPSHOT_PROJECTION)
         return {issue["_id"]: issue for issue in issues}
+
+    def _carry_over_target(
+        self, sprint: dict[str, Any], value: str | None
+    ) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        target_id = object_id_or_422(value, "carryOverSprintId")
+        target = self.sprints.find_by_id(target_id)
+        if (
+            target is None
+            or target["projectId"] != sprint["projectId"]
+            or target["status"] != SprintStatus.PLANNED
+        ):
+            raise BusinessRuleError(
+                "O destino tem de ser um sprint planeado do mesmo projeto",
+                field="carryOverSprintId",
+            )
+        return target
+
+    def _result(
+        self,
+        sprint: dict[str, Any],
+        issues: list[dict[str, Any]],
+        target: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        commitment = self.snapshots.find_latest(sprint["_id"], SnapshotKind.COMMITMENT)
+        committed = {item["issueId"] for item in commitment["issues"]} if commitment else set()
+        done = [issue for issue in issues if issue["status"] == IssueStatus.DONE]
+        pending = [issue for issue in issues if issue["status"] != IssueStatus.DONE]
+        committed_done = [issue for issue in done if issue["_id"] in committed]
+
+        def points(items: list[dict[str, Any]]) -> float:
+            return sum(issue.get("storyPoints") or 0 for issue in items)
+
+        return {
+            "completedIssueCount": len(done),
+            "completedStoryPoints": points(done),
+            "carriedOverIssueCount": len(pending),
+            "carriedOverStoryPoints": points(pending),
+            "carryOverSprintId": target["_id"] if target else None,
+            "committedCompletedIssueCount": len(committed_done),
+            "committedCompletedStoryPoints": points(committed_done),
+        }
+
+    def _carry_over(
+        self, user: User, issue: dict[str, Any], target: ObjectId | None, now: datetime
+    ) -> None:
+        """O sprint já está fechado: uma issue que mudou entretanto não anula o fecho."""
+        try:
+            self._move(user, issue, target, now)
+        except (ConflictError, PyMongoError):
+            logger.exception(
+                "Falha ao transportar a issue %s no fecho do sprint (requestId=%s)",
+                issue.get("key"),
+                request_id_var.get(),
+            )
+
+    def _revert_close(self, sprint: dict[str, Any]) -> None:
+        try:
+            self.sprints.transition(
+                sprint["_id"],
+                sprint["version"],
+                from_status=SprintStatus.CLOSED,
+                now=datetime.now(UTC),
+                set_fields={
+                    "status": SprintStatus.ACTIVE.value,
+                    "closedAt": None,
+                    "closedBy": None,
+                    "result": None,
+                    "retrospective": None,
+                },
+            )
+        except PyMongoError:
+            logger.exception(
+                "Falha ao reverter o fecho do sprint %s (requestId=%s)",
+                sprint["_id"],
+                request_id_var.get(),
+            )
 
     def _revert_start(self, sprint: dict[str, Any]) -> None:
         try:

@@ -16,6 +16,7 @@ import { BlockedBadge, IssueStatusBadge, IssueTypeBadge } from '@/features/issue
 import { useIssues } from '@/features/issues/useIssues'
 import { useProjectContext } from '@/features/projects/projectContext'
 import { EstimateInput } from '@/features/sprints/EstimateInput'
+import { SprintClosure } from '@/features/sprints/SprintClosePage'
 import { SprintCommitment } from '@/features/sprints/SprintCommitment'
 import { SprintStatusBadge } from '@/features/sprints/SprintsPage'
 import {
@@ -320,6 +321,11 @@ export function SprintDetailPage() {
               <Link to={`/projects/${project.id}/board?sprintId=${data.id}`}>Ver quadro</Link>
             </Button>
           )}
+          {data.canEdit && data.status === 'active' && (
+            <Button asChild>
+              <Link to={`/projects/${project.id}/sprints/${data.id}/close`}>Fechar sprint</Link>
+            </Button>
+          )}
           {data.canEdit && (
             <Button variant="outline" asChild>
               <Link to={`/projects/${project.id}/sprints/${data.id}/edit`}>Editar</Link>
@@ -331,6 +337,7 @@ export function SprintDetailPage() {
         </div>
       </div>
       <PlanningTotals sprint={data} />
+      <SprintClosure sprint={data} />
       <SprintCommitment sprint={data} />
       <SprintPlanning sprint={data} />
     </div>

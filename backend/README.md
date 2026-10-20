@@ -261,6 +261,7 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 | `DELETE /api/sprints/{id}/issues/{issueId}` | `sprints:manage` + acesso | Devolve a issue ao backlog → sprint atualizado; auditoria `sprint.issue_removed` |
 | `POST /api/sprints/{id}/start` | `sprints:manage` + acesso | `{version}` → sprint `active`; auditoria `sprint.started` |
 | `GET /api/sprints/{id}/commitment` | `projects:read` + acesso | Compromisso congelado no início + issues retiradas/adicionadas depois; 404 se não iniciado |
+| `POST /api/sprints/{id}/close` | `sprints:manage` + acesso | `{version, carryOverSprintId?, retrospective?: {wentWell, toImprove, actions}}` → sprint `closed`; auditoria `sprint.closed` |
 
 - Estados `planned`, `active`, `closed` (iniciar no DEV-017, fechar no DEV-018). Sprints novos
   ficam `planned`.
@@ -290,6 +291,15 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   story points no início, `totals`), único por `(sprintId, kind, day)`. Sem transações: primeiro
   a transição condicional do sprint, depois o snapshot; se o snapshot falhar o sprint volta a
   `planned`. A migration `0006_sprint_snapshots` cria a collection.
+- **Fecho (DEV-018):** só sprints `active` (422 `field=status`). As issues por concluir vão para
+  o backlog (`carryOverSprintId` nulo) ou para um sprint `planned` do mesmo projeto (senão 422
+  `field=carryOverSprintId`); as `done` ficam no sprint. Grava `closedAt`, `closedBy`,
+  `retrospective` (cada texto ≤ 5000, sem espaços nas pontas) e `result` (concluídas,
+  transportadas, destino e concluídas do compromisso), calculado antes do transporte.
+- Ordem: transição condicional `active` → `closed`, snapshot `kind: "closing"` (se falhar o
+  sprint volta a `active` e o pedido falha), transporte issue a issue com histórico `sprintId`
+  (o limite de 300 issues não se aplica; falhas individuais ficam no log) e auditoria. Depois
+  do fecho o compromisso compara com o snapshot de fecho.
 
 ### Casos e planos de teste
 

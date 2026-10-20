@@ -16,6 +16,7 @@ import { ProjectLayout } from '@/features/projects/ProjectLayout'
 import { ProjectMembers } from '@/features/projects/ProjectMembers'
 import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { ProjectSummaryPage } from '@/features/projects/ProjectSummaryPage'
+import { SprintClosePage } from '@/features/sprints/SprintClosePage'
 import { SprintDetailPage } from '@/features/sprints/SprintDetailPage'
 import { SprintCreatePage, SprintEditPage } from '@/features/sprints/SprintForm'
 import { SprintsPage } from '@/features/sprints/SprintsPage'
@@ -51,6 +52,7 @@ export const routes: RouteObject[] = [
               { path: 'sprints/new', element: <SprintCreatePage /> },
               { path: 'sprints/:sprintId', element: <SprintDetailPage /> },
               { path: 'sprints/:sprintId/edit', element: <SprintEditPage /> },
+              { path: 'sprints/:sprintId/close', element: <SprintClosePage /> },
               { path: 'tests', element: <TestCasesPage /> },
               { path: 'tests/cases/new', element: <TestCaseCreatePage /> },
               { path: 'tests/cases/:testCaseId', element: <TestCaseEditPage /> },

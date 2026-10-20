@@ -26,7 +26,14 @@ from app.repositories.issues import IssueRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.sprints import SprintNameExistsError, SprintRepository
 from app.schemas.common import PageParams
-from app.schemas.sprints import SprintCreate, SprintResponse, SprintScope, SprintUpdate
+from app.schemas.sprints import (
+    SprintCreate,
+    SprintResponse,
+    SprintResult,
+    SprintRetrospective,
+    SprintScope,
+    SprintUpdate,
+)
 from app.services.authorization import ensure_project_access
 from app.services.common import jsonable
 
@@ -38,6 +45,14 @@ _TRACKED_FIELDS = ("name", "goal", "startDate", "endDate", "capacityStoryPoints"
 
 def _rule_error(error: SprintRuleError) -> BusinessRuleError:
     return BusinessRuleError(str(error), field=error.field)
+
+
+def _result(value: dict[str, Any] | None) -> SprintResult | None:
+    if not value:
+        return None
+    return SprintResult.model_validate(
+        {**value, "carryOverSprintId": jsonable(value.get("carryOverSprintId"))}
+    )
 
 
 def _at(value: date) -> datetime:
@@ -210,6 +225,12 @@ class SprintService:
                     committed_issue_count=sprint.get("committedIssueCount"),
                     started_at=sprint.get("startedAt"),
                     closed_at=sprint.get("closedAt"),
+                    result=_result(sprint.get("result")),
+                    retrospective=(
+                        SprintRetrospective.model_validate(sprint["retrospective"])
+                        if sprint.get("retrospective")
+                        else None
+                    ),
                     created_at=sprint["createdAt"],
                     updated_at=sprint["updatedAt"],
                     version=sprint.get("version", 1),

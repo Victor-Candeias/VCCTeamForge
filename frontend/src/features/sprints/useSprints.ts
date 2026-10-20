@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import {
   addSprintIssues,
+  closeSprint,
   createSprint,
   getSprint,
   getSprintCommitment,
@@ -10,6 +11,7 @@ import {
   startSprint,
   updateSprint,
   type Sprint,
+  type SprintCloseInput,
   type SprintFilters,
 } from '@/services/sprints'
 
@@ -102,6 +104,21 @@ export function useStartSprint(sprintId: string) {
       update(sprint)
       void queryClient.invalidateQueries({ queryKey: sprintKeys.commitment(sprintId) })
       void queryClient.invalidateQueries({ queryKey: ['issues', 'board'] })
+    },
+  })
+}
+
+/** Fechar muda o sprint, move as issues pendentes e congela o compromisso. */
+export function useCloseSprint(sprintId: string) {
+  const queryClient = useQueryClient()
+  const update = useSprintCacheUpdate()
+  return useMutation({
+    mutationFn: (input: SprintCloseInput) => closeSprint(sprintId, input),
+    onSuccess: (sprint) => {
+      update(sprint)
+      void queryClient.invalidateQueries({ queryKey: ['sprints', 'detail'] })
+      void queryClient.invalidateQueries({ queryKey: sprintKeys.commitment(sprintId) })
+      void queryClient.invalidateQueries({ queryKey: ['issues'] })
     },
   })
 }

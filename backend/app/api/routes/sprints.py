@@ -7,6 +7,7 @@ from app.domain.sprints import SprintStatus
 from app.domain.users import User
 from app.schemas.common import Page, PageParams, parse_sort
 from app.schemas.sprints import (
+    SprintClose,
     SprintCommitment,
     SprintCreate,
     SprintIssuesAdd,
@@ -117,6 +118,16 @@ def start_sprint(
     service: SprintLifecycleService = Depends(get_lifecycle_service),
 ) -> SprintResponse:
     return service.start(user, parse_object_id(sprint_id, "Sprint"), data)
+
+
+@router.post("/{sprint_id}/close", response_model=SprintResponse)
+def close_sprint(
+    sprint_id: str,
+    data: SprintClose,
+    user: User = Depends(can_manage),
+    service: SprintLifecycleService = Depends(get_lifecycle_service),
+) -> SprintResponse:
+    return service.close(user, parse_object_id(sprint_id, "Sprint"), data)
 
 
 @router.get("/{sprint_id}/commitment", response_model=SprintCommitment)

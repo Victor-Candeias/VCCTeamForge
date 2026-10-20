@@ -100,6 +100,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 | `/projects/:projectId/sprints/new` | Criação; sugere `Sprint N+1`, início no dia seguinte ao fim do último sprint (ou hoje) e fim pela duração do projeto |
 | `/projects/:projectId/sprints/:sprintId` | Planeamento: totais (issues, story points vs capacidade, sem estimativa, concluídas), issues do sprint e backlog elegível para adicionar/remover; iniciar (com confirmação) e compromisso |
 | `/projects/:projectId/sprints/:sprintId/edit` | Edição (envia `version`); num sprint ativo a data de início é só de leitura |
+| `/projects/:projectId/sprints/:sprintId/close` | Fecho: resumo concluídas/por concluir, destino (backlog ou sprint planeado) e retrospetiva |
 
 - "Novo sprint" e "Editar" só aparecem com `sprints:manage`, projeto não arquivado e `canEdit`.
 - A validação zod espelha o backend (fim ≥ início, máximo de 60 dias); os erros 409/422 do
@@ -111,6 +112,10 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - "Iniciar sprint" só aparece num sprint `planned` com `canEdit` (desativado sem issues) e pede
   confirmação com o compromisso. Depois do início, a secção "Compromisso" compara o snapshot
   inicial com o estado atual (retiradas/adicionadas) e "Ver quadro" abre o quadro do sprint.
+- "Fechar sprint" só aparece num sprint `active` com `canEdit`. O fecho envia `version`,
+  `carryOverSprintId` e a retrospetiva, mostra erros por campo e volta ao detalhe, que num
+  sprint fechado mostra "Resultado" (concluídas, do compromisso, transportadas) e a
+  retrospetiva.
 
 ## Testes
 

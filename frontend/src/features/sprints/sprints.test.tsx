@@ -38,6 +38,8 @@ function testSprint(overrides: Record<string, unknown> = {}) {
     committedIssueCount: null,
     startedAt: null,
     closedAt: null,
+    result: null,
+    retrospective: null,
     createdAt: '2026-01-01T10:00:00Z',
     updatedAt: '2026-01-01T10:00:00Z',
     version: 1,
@@ -417,5 +419,114 @@ describe('início do sprint', () => {
       'href',
       '/projects/p1/board?sprintId=s1',
     )
+  })
+})
+
+describe('fecho do sprint', () => {
+  const scope = {
+    issueCount: 3,
+    storyPoints: 10,
+    unestimatedCount: 0,
+    completedIssueCount: 1,
+    completedStoryPoints: 5,
+  }
+  const active = () =>
+    testSprint({ status: 'active', startedAt: '2099-01-02T09:00:00Z', scope, version: 4 })
+  const commitment = {
+    sprintId: 's1',
+    takenAt: '2099-01-02T09:00:00Z',
+    issueCount: 0,
+    storyPoints: 0,
+    unestimatedCount: 0,
+    removedCount: 0,
+    addedCount: 0,
+    addedStoryPoints: 0,
+    issues: [],
+    added: [],
+  }
+  const PLANNED = 'GET /api/sprints?projectId=p1&status=planned&sort=startDate&pageSize=50'
+
+  it('fecha com destino e retrospetiva e mostra erros por campo', async () => {
+    const bodies: unknown[] = []
+    let attempts = 0
+    mockApi({
+      ...csrfHandler,
+      'GET /api/users/me': () => jsonResponse(sprintManager),
+      'GET /api/projects/p1': () => jsonResponse(testProject()),
+      'GET /api/sprints/s1': () => jsonResponse(active()),
+      'GET /api/sprints/s1/commitment': () => jsonResponse(commitment),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([], 1, 100)),
+      [BACKLOG]: () => jsonResponse(pageOf([], 1, 100)),
+      [PLANNED]: () =>
+        jsonResponse(pageOf([testSprint({ id: 's2', name: 'Sprint 2', startDate: '2099-01-16' })], 1, 50)),
+      'POST /api/sprints/s1/close': (init) => {
+        bodies.push(JSON.parse(String(init.body)))
+        attempts += 1
+        if (attempts === 1) {
+          return jsonResponse(
+            { title: 'Regra', detail: 'Sprint de destino inválido', field: 'carryOverSprintId' },
+            422,
+          )
+        }
+        return jsonResponse(testSprint({ status: 'closed', canEdit: false, version: 5 }))
+      },
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    await user.click(await screen.findByRole('link', { name: 'Fechar sprint' }))
+    expect(await screen.findByText(/1 issues concluídas \(5 story points\)/)).toBeInTheDocument()
+    expect(screen.getByText(/2 issues por concluir \(\s*5 story points\)/)).toBeInTheDocument()
+    await user.selectOptions(
+      await screen.findByLabelText('Destino das issues por concluir'),
+      await screen.findByRole('option', { name: /Sprint 2/ }),
+    )
+    await user.type(screen.getByLabelText('O que correu bem'), 'Entregas')
+    await user.click(screen.getByRole('button', { name: 'Fechar sprint' }))
+
+    expect((await screen.findAllByText('Sprint de destino inválido')).length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Fechar sprint' }))
+
+    await waitFor(() => expect(attempts).toBe(2))
+    expect(bodies[1]).toEqual({
+      version: 4,
+      carryOverSprintId: 's2',
+      retrospective: { wentWell: 'Entregas', toImprove: '', actions: '' },
+    })
+  })
+
+  it('mostra o resultado e a retrospetiva de um sprint fechado', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(sprintManager),
+      'GET /api/projects/p1': () => jsonResponse(testProject()),
+      'GET /api/sprints/s1': () =>
+        jsonResponse(
+          testSprint({
+            status: 'closed',
+            canEdit: false,
+            closedAt: '2099-01-15T17:00:00Z',
+            result: {
+              completedIssueCount: 4,
+              completedStoryPoints: 13,
+              carriedOverIssueCount: 2,
+              carriedOverStoryPoints: 5,
+              carryOverSprintId: null,
+              committedCompletedIssueCount: 3,
+              committedCompletedStoryPoints: 8,
+            },
+            retrospective: { wentWell: 'Boa colaboração', toImprove: '', actions: 'Rever estimativas' },
+          }),
+        ),
+      'GET /api/sprints/s1/commitment': () => jsonResponse(commitment),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([], 1, 100)),
+    })
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    expect(await screen.findByRole('heading', { name: 'Resultado' })).toBeInTheDocument()
+    expect(screen.getByText('13 story points')).toBeInTheDocument()
+    expect(screen.getByText('5 story points para o backlog')).toBeInTheDocument()
+    expect(screen.getByText('Boa colaboração')).toBeInTheDocument()
+    expect(screen.getByText('Rever estimativas')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Fechar sprint' })).not.toBeInTheDocument()
   })
 })

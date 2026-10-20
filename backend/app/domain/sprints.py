@@ -14,6 +14,7 @@ SPRINT_GOAL_MAX_LENGTH = 1000
 SPRINT_ISSUES_MAX = 300
 SPRINT_ISSUES_PER_REQUEST_MAX = 50
 CAPACITY_MAX = 1000
+RETROSPECTIVE_TEXT_MAX_LENGTH = 5000
 
 
 class SprintStatus(StrEnum):
@@ -91,3 +92,8 @@ def validate_startable(
         )
     if issue_count == 0:
         raise SprintRuleError("Associe pelo menos uma issue antes de iniciar o sprint", "issueIds")
+
+
+def validate_closable(status: SprintStatus | str) -> None:
+    if SprintStatus(status) is not SprintStatus.ACTIVE:
+        raise SprintRuleError("Só um sprint ativo pode ser fechado", "status")

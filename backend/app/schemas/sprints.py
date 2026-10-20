@@ -5,6 +5,7 @@ from pydantic import ConfigDict, Field
 from app.domain.issues import IssueStatus, IssueType
 from app.domain.sprints import (
     CAPACITY_MAX,
+    RETROSPECTIVE_TEXT_MAX_LENGTH,
     SPRINT_GOAL_MAX_LENGTH,
     SPRINT_ISSUES_PER_REQUEST_MAX,
     SPRINT_NAME_MAX_LENGTH,
@@ -54,6 +55,26 @@ class SprintScope(ApiModel):
     completed_story_points: float = 0
 
 
+class SprintRetrospective(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
+    went_well: str = Field(default="", max_length=RETROSPECTIVE_TEXT_MAX_LENGTH)
+    to_improve: str = Field(default="", max_length=RETROSPECTIVE_TEXT_MAX_LENGTH)
+    actions: str = Field(default="", max_length=RETROSPECTIVE_TEXT_MAX_LENGTH)
+
+
+class SprintResult(ApiModel):
+    """Resultado no fecho: concluídas (estado ``done``) e transportadas."""
+
+    completed_issue_count: int
+    completed_story_points: float
+    carried_over_issue_count: int
+    carried_over_story_points: float
+    carry_over_sprint_id: str | None
+    committed_completed_issue_count: int
+    committed_completed_story_points: float
+
+
 class SprintResponse(ApiModel):
     id: str
     project_id: str
@@ -69,6 +90,8 @@ class SprintResponse(ApiModel):
     committed_issue_count: int | None
     started_at: datetime | None
     closed_at: datetime | None
+    result: SprintResult | None
+    retrospective: SprintRetrospective | None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -115,3 +138,12 @@ class SprintCommitment(ApiModel):
     added_story_points: float
     issues: list[CommittedIssue]
     added: list[AddedIssue]
+
+
+class SprintClose(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: int = Field(ge=1)
+    # ``None``: as issues por concluir voltam ao backlog.
+    carry_over_sprint_id: str | None = None
+    retrospective: SprintRetrospective = Field(default_factory=SprintRetrospective)

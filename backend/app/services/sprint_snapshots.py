@@ -13,6 +13,8 @@ class SnapshotKind:
 
 
 SNAPSHOT_PROJECTION = {
+    "projectId": 1,
+    "sprintId": 1,
     "key": 1,
     "title": 1,
     "type": 1,

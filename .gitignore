@@ -114,6 +114,7 @@ Desktop.ini
 *.pid.lock
 core
 core.*
+!backend/app/core/
 
 # --------------------------------------------
 # Python (utility scripts)
@@ -121,6 +122,10 @@ core.*
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
 
 # --------------------------------------------
 # Package Manager

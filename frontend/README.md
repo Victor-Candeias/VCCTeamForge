@@ -131,9 +131,14 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 | `/projects/:projectId/tests/plans` | Lista de planos de teste com filtro de estado |
 | `/projects/:projectId/tests/plans/new` | Criação de plano: escolher casos (`draft`/`ready`) e ordená-los |
 | `/projects/:projectId/tests/plans/:testPlanId` | Edição; num plano fechado só é possível mudar o estado para o reabrir |
+| `/projects/:projectId/tests/runs` | Execuções com filtro de resultado, "Só as minhas" e `?testCaseId=`/`?testPlanId=` |
+| `/projects/:projectId/tests/runs/new?testCaseId=&testPlanId=` | Registo de execução mostrando os passos do caso (`tests:execute`) |
+| `/projects/:projectId/tests/runs/:testRunId` | Detalhe/edição, evidências (upload/remoção) e "Criar bug" em execuções falhadas |
 
 - Os botões de criação e edição só aparecem com `tests:manage`, projeto não arquivado e `canEdit`.
 - Os erros 409/422 do servidor aparecem no campo indicado em `field`.
+- A página do plano mostra o progresso (executados, pass rate, regressões e último resultado por
+  caso) com o botão "Executar" por caso; a página do caso tem "Executar" e "Ver execuções".
 
 ## Auditoria
 

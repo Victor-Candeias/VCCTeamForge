@@ -11,8 +11,10 @@ import type { IssueRef } from '@/services/issues'
 import {
   testCaseStatusLabels,
   testPlanStatusLabels,
+  testRunResultLabels,
   type TestCaseStatus,
   type TestPlanStatus,
+  type TestRunResult,
 } from '@/services/testing'
 
 export function TestingNav({ projectId }: { projectId: string }) {
@@ -28,6 +30,9 @@ export function TestingNav({ projectId }: { projectId: string }) {
       </NavLink>
       <NavLink to={`/projects/${projectId}/tests/plans`} className={link}>
         Planos de teste
+      </NavLink>
+      <NavLink to={`/projects/${projectId}/tests/runs`} className={link}>
+        Execuções
       </NavLink>
     </nav>
   )
@@ -45,6 +50,25 @@ export function TestPlanStatusBadge({ status }: { status: TestPlanStatus }) {
   return (
     <Badge variant={status === 'active' ? 'default' : status === 'closed' ? 'outline' : 'secondary'}>
       {testPlanStatusLabels[status]}
+    </Badge>
+  )
+}
+
+const resultStyles: Record<TestRunResult, string> = {
+  pass: 'border-transparent bg-emerald-600 text-white',
+  fail: 'border-transparent bg-red-600 text-white',
+  blocked: 'border-transparent bg-amber-500 text-white',
+  not_run: '',
+  skipped: '',
+}
+
+export function TestRunResultBadge({ result }: { result: TestRunResult }) {
+  return (
+    <Badge
+      variant={result === 'not_run' || result === 'skipped' ? 'outline' : 'default'}
+      className={resultStyles[result]}
+    >
+      {testRunResultLabels[result]}
     </Badge>
   )
 }

@@ -52,3 +52,42 @@ def plan_name_key(name: str) -> str:
 
 def can_manage_tests(user: User) -> bool:
     return user.has_permissions(Permission.TESTS_MANAGE)
+
+
+# Execuções (DEV-021) -----------------------------------------------------------------------
+
+TEST_RUN_TEXT_MAX_LENGTH = 5000
+TEST_RUN_ENVIRONMENT_MAX_LENGTH = 200
+TEST_RUN_BUGS_MAX = 20
+
+
+class TestRunResult(StrEnum):
+    __test__ = False
+
+    PASS = "pass"  # noqa: S105 - resultado de teste, não é uma password
+    FAIL = "fail"
+    BLOCKED = "blocked"
+    NOT_RUN = "not_run"
+    SKIPPED = "skipped"
+
+
+# Resultados que contam para a taxa de aprovação (README §9 "QA Pass Rate").
+PASS_RATE_RESULTS = frozenset({TestRunResult.PASS, TestRunResult.FAIL, TestRunResult.BLOCKED})
+
+
+def pass_rate(counts: dict[str, int]) -> float | None:
+    """Aprovados / (aprovados + falhados + bloqueados); ``skipped``/``not_run`` não contam."""
+    relevant = sum(counts.get(result.value, 0) for result in PASS_RATE_RESULTS)
+    if relevant == 0:
+        return None
+    return round(counts.get(TestRunResult.PASS.value, 0) / relevant, 4)
+
+
+def can_execute_tests(user: User) -> bool:
+    return user.has_permissions(Permission.TESTS_EXECUTE)
+
+
+def can_edit_test_run(user: User, run: dict) -> bool:
+    if user.has_permissions(Permission.TESTS_MANAGE):
+        return True
+    return can_execute_tests(user) and run.get("executedBy") == user.id

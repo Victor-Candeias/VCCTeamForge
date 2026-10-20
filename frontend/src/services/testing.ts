@@ -1,5 +1,5 @@
 import { apiFetch, toQueryString } from '@/services/apiClient'
-import type { Page, Priority } from '@/services/common'
+import type { Page, Priority, UserSummary } from '@/services/common'
 import type { IssueRef } from '@/services/issues'
 
 export type TestCaseStatus = 'draft' | 'ready' | 'deprecated'
@@ -146,4 +146,155 @@ export function updateTestPlan(
     method: 'PATCH',
     body: JSON.stringify(input),
   })
+}
+
+// Execuções (DEV-021) -----------------------------------------------------------------------
+
+export type TestRunResult = 'pass' | 'fail' | 'blocked' | 'not_run' | 'skipped'
+
+export const testRunResultLabels: Record<TestRunResult, string> = {
+  pass: 'Passou',
+  fail: 'Falhou',
+  blocked: 'Bloqueado',
+  not_run: 'Não executado',
+  skipped: 'Ignorado',
+}
+
+export type TestRunSummary = {
+  id: string
+  projectId: string
+  testCaseId: string
+  testCaseKey: string
+  testCaseTitle: string
+  testPlanId: string | null
+  testPlanName: string | null
+  result: TestRunResult
+  environment: string
+  executedBy: UserSummary | null
+  executedAt: string
+  bugCount: number
+  evidenceCount: number
+  version: number
+}
+
+export type TestRun = TestRunSummary & {
+  actualResult: string
+  notes: string
+  bugs: IssueRef[]
+  createdAt: string
+  updatedAt: string
+  canEdit: boolean
+  canAddEvidence: boolean
+  canCreateBug: boolean
+}
+
+export type TestRunFilters = {
+  projectId: string
+  testCaseId?: string
+  testPlanId?: string
+  result?: TestRunResult[]
+  executedBy?: string
+  sort?: string
+  page?: number
+  pageSize?: number
+}
+
+export type TestRunInput = {
+  testCaseId: string
+  testPlanId?: string
+  result: TestRunResult
+  actualResult: string
+  notes: string
+  environment: string
+}
+
+export type TestRunUpdateInput = Partial<
+  Pick<TestRunInput, 'result' | 'actualResult' | 'notes' | 'environment'>
+> & { version: number }
+
+export type TestRunBugInput = { title?: string; priority?: Priority; assigneeId?: string }
+
+export type TestRunEvidence = {
+  id: string
+  testRunId: string
+  originalName: string
+  contentType: string
+  size: number
+  sha256: string
+  isImage: boolean
+  uploadedBy: UserSummary | null
+  createdAt: string
+  canDelete: boolean
+}
+
+export type TestPlanCaseProgress = {
+  testCase: TestCaseRef
+  lastRunId: string | null
+  lastResult: TestRunResult
+  lastExecutedAt: string | null
+  lastExecutedBy: UserSummary | null
+  previousResult: TestRunResult | null
+  regression: boolean
+}
+
+export type TestPlanProgress = {
+  testPlanId: string
+  totalCases: number
+  counts: Record<TestRunResult, number>
+  executedCases: number
+  passRate: number | null
+  regressions: number
+  cases: TestPlanCaseProgress[]
+}
+
+export function listTestRuns(filters: TestRunFilters) {
+  return apiFetch<Page<TestRunSummary>>(`/test-runs${toQueryString(filters)}`)
+}
+
+export function getTestRun(testRunId: string) {
+  return apiFetch<TestRun>(`/test-runs/${testRunId}`)
+}
+
+export function createTestRun(input: TestRunInput) {
+  return apiFetch<TestRun>('/test-runs', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function updateTestRun(testRunId: string, input: TestRunUpdateInput) {
+  return apiFetch<TestRun>(`/test-runs/${testRunId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export function createTestRunBug(testRunId: string, input: TestRunBugInput) {
+  return apiFetch<TestRun>(`/test-runs/${testRunId}/bugs`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function getTestPlanProgress(testPlanId: string) {
+  return apiFetch<TestPlanProgress>(`/test-plans/${testPlanId}/progress`)
+}
+
+export function listTestRunEvidences(testRunId: string) {
+  return apiFetch<TestRunEvidence[]>(`/test-runs/${testRunId}/evidences`)
+}
+
+export function uploadTestRunEvidence(testRunId: string, file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  return apiFetch<TestRunEvidence>(`/test-runs/${testRunId}/evidences`, { method: 'POST', body })
+}
+
+export function deleteTestRunEvidence(testRunId: string, evidenceId: string) {
+  return apiFetch<void>(`/test-runs/${testRunId}/evidences/${evidenceId}`, { method: 'DELETE' })
+}
+
+export function testRunEvidenceUrl(testRunId: string, evidenceId: string, inline = false) {
+  return `/api/test-runs/${testRunId}/evidences/${evidenceId}/content${inline ? '?inline=1' : ''}`
+}
+
+export function formatPassRate(value: number | null): string {
+  return value === null ? '—' : `${Math.round(value * 1000) / 10}%`.replace('.', ',')
 }

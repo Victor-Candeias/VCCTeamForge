@@ -3,6 +3,15 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import {
   createTestCase,
   createTestPlan,
+  createTestRun,
+  createTestRunBug,
+  deleteTestRunEvidence,
+  getTestPlanProgress,
+  getTestRun,
+  listTestRunEvidences,
+  listTestRuns,
+  updateTestRun,
+  uploadTestRunEvidence,
   getTestCase,
   getTestPlan,
   listTestCases,
@@ -13,6 +22,10 @@ import {
   type TestCaseFilters,
   type TestPlan,
   type TestPlanFilters,
+  type TestRun,
+  type TestRunBugInput,
+  type TestRunFilters,
+  type TestRunUpdateInput,
 } from '@/services/testing'
 
 export const testCaseKeys = {
@@ -100,4 +113,95 @@ export function useUpdateTestPlan(testPlanId: string) {
     mutationFn: (input: Parameters<typeof updateTestPlan>[1]) => updateTestPlan(testPlanId, input),
     onSuccess: update,
   })
+}
+
+export const testRunKeys = {
+  list: (filters: TestRunFilters) => ['test-runs', 'list', filters] as const,
+  detail: (testRunId: string) => ['test-runs', 'detail', testRunId] as const,
+  evidences: (testRunId: string) => ['test-runs', 'evidences', testRunId] as const,
+  progress: (testPlanId: string) => ['test-plans', 'progress', testPlanId] as const,
+}
+
+export function useTestRuns(filters: TestRunFilters) {
+  return useQuery({
+    queryKey: testRunKeys.list(filters),
+    queryFn: () => listTestRuns(filters),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useTestRun(testRunId: string) {
+  return useQuery({
+    queryKey: testRunKeys.detail(testRunId),
+    queryFn: () => getTestRun(testRunId),
+    enabled: Boolean(testRunId),
+  })
+}
+
+export function useTestPlanProgress(testPlanId: string) {
+  return useQuery({
+    queryKey: testRunKeys.progress(testPlanId),
+    queryFn: () => getTestPlanProgress(testPlanId),
+    enabled: Boolean(testPlanId),
+  })
+}
+
+function useTestRunCacheUpdate() {
+  const queryClient = useQueryClient()
+  return (run: TestRun) => {
+    queryClient.setQueryData(testRunKeys.detail(run.id), run)
+    void queryClient.invalidateQueries({ queryKey: ['test-runs', 'list'] })
+    void queryClient.invalidateQueries({ queryKey: ['test-plans', 'progress'] })
+  }
+}
+
+export function useCreateTestRun() {
+  const update = useTestRunCacheUpdate()
+  return useMutation({ mutationFn: createTestRun, onSuccess: update })
+}
+
+export function useUpdateTestRun(testRunId: string) {
+  const update = useTestRunCacheUpdate()
+  return useMutation({
+    mutationFn: (input: TestRunUpdateInput) => updateTestRun(testRunId, input),
+    onSuccess: update,
+  })
+}
+
+export function useCreateTestRunBug(testRunId: string) {
+  const update = useTestRunCacheUpdate()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: TestRunBugInput) => createTestRunBug(testRunId, input),
+    onSuccess: (run) => {
+      update(run)
+      void queryClient.invalidateQueries({ queryKey: ['issues'] })
+    },
+  })
+}
+
+export function useTestRunEvidences(testRunId: string) {
+  return useQuery({
+    queryKey: testRunKeys.evidences(testRunId),
+    queryFn: () => listTestRunEvidences(testRunId),
+  })
+}
+
+export function useTestRunEvidenceMutations(testRunId: string) {
+  const queryClient = useQueryClient()
+  const onSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: testRunKeys.evidences(testRunId) })
+    void queryClient.invalidateQueries({ queryKey: testRunKeys.detail(testRunId) })
+    void queryClient.invalidateQueries({ queryKey: ['test-runs', 'list'] })
+  }
+  return {
+    upload: useMutation({
+      mutationFn: (file: File) => uploadTestRunEvidence(testRunId, file),
+      onSuccess,
+    }),
+    remove: useMutation({
+      mutationFn: (evidenceId: string) => deleteTestRunEvidence(testRunId, evidenceId),
+      onSuccess,
+    }),
+  }
 }

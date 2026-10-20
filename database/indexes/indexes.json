@@ -24,6 +24,7 @@
     {"collection": "issue_comments", "name": "issue_comments_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", 1]]},
     {"collection": "issue_history", "name": "issue_history_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", -1]]},
     {"collection": "attachments", "name": "attachments_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", 1]]},
+    {"collection": "attachments", "name": "attachments_testRunId_createdAt", "keys": [["testRunId", 1], ["createdAt", 1]], "options": {"partialFilterExpression": {"testRunId": {"$exists": true}}}},
 
     {"collection": "sprints", "name": "sprints_projectId_status", "keys": [["projectId", 1], ["status", 1]]},
     {"collection": "sprints", "name": "sprints_projectId_nameKey_unique", "keys": [["projectId", 1], ["nameKey", 1]], "options": {"unique": true}},
@@ -38,6 +39,8 @@
     {"collection": "test_plans", "name": "test_plans_projectId_createdAt", "keys": [["projectId", 1], ["createdAt", -1]]},
 
     {"collection": "test_runs", "name": "test_runs_projectId_executedAt", "keys": [["projectId", 1], ["executedAt", -1]]},
+    {"collection": "test_runs", "name": "test_runs_testCaseId_executedAt", "keys": [["testCaseId", 1], ["executedAt", -1]]},
+    {"collection": "test_runs", "name": "test_runs_testPlanId_executedAt", "keys": [["testPlanId", 1], ["executedAt", -1]]},
 
     {"collection": "sessions", "name": "sessions_tokenHash_unique", "keys": [["tokenHash", 1]], "options": {"unique": true}},
     {"collection": "sessions", "name": "sessions_userId", "keys": [["userId", 1]]},

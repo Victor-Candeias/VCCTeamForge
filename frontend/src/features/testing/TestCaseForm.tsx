@@ -294,6 +294,7 @@ export function TestCaseEditPage() {
   const navigate = useNavigate()
   const testCase = useTestCase(testCaseId)
   const mutation = useUpdateTestCase(testCaseId)
+  const canExecute = usePermission('tests:execute')
 
   if (testCase.isPending) return <p className="text-muted-foreground">A carregar…</p>
   if (testCase.isError || testCase.data.projectId !== project.id) {
@@ -305,11 +306,28 @@ export function TestCaseEditPage() {
   }
 
   const data = testCase.data
+  const canRun = canExecute && project.status !== 'archived' && data.status !== 'deprecated'
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">
-        {data.key} · {data.title}
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-semibold">
+          {data.key} · {data.title}
+        </h2>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to={`/projects/${project.id}/tests/runs?testCaseId=${data.id}`}>
+              Ver execuções
+            </Link>
+          </Button>
+          {canRun && (
+            <Button asChild>
+              <Link to={`/projects/${project.id}/tests/runs/new?testCaseId=${data.id}`}>
+                Executar
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
       {!data.canEdit && (
         <p className="text-sm text-muted-foreground">Consulta apenas: sem permissão para editar.</p>
       )}

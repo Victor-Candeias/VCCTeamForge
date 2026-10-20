@@ -13,6 +13,7 @@ import { NativeSelect } from '@/components/ui/native-select'
 import { Textarea } from '@/components/ui/textarea'
 import { useProjectContext } from '@/features/projects/projectContext'
 import { IssueLinks, TestCaseStatusBadge } from '@/features/testing/TestingShared'
+import { TestPlanProgress } from '@/features/testing/TestPlanProgress'
 import { useCreateTestPlan, useTestCases, useTestPlan, useUpdateTestPlan } from '@/features/testing/useTesting'
 import { usePermission } from '@/hooks/usePermissions'
 import { mutationErrorMessage } from '@/lib/errors'
@@ -281,6 +282,7 @@ export function TestPlanEditPage() {
   const navigate = useNavigate()
   const plan = useTestPlan(testPlanId)
   const mutation = useUpdateTestPlan(testPlanId)
+  const canExecute = usePermission('tests:execute') && project.status !== 'archived'
 
   if (plan.isPending) return <p className="text-muted-foreground">A carregar…</p>
   if (plan.isError || plan.data.projectId !== project.id) {
@@ -313,6 +315,7 @@ export function TestPlanEditPage() {
           )
         }
       />
+      <TestPlanProgress plan={data} projectId={project.id} canExecute={canExecute} />
     </div>
   )
 }

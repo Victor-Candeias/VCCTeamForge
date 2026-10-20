@@ -24,6 +24,9 @@ import { TestCaseCreatePage, TestCaseEditPage } from '@/features/testing/TestCas
 import { TestCasesPage } from '@/features/testing/TestCasesPage'
 import { TestPlanCreatePage, TestPlanEditPage } from '@/features/testing/TestPlanForm'
 import { TestPlansPage } from '@/features/testing/TestPlansPage'
+import { TestRunDetailPage } from '@/features/testing/TestRunDetailPage'
+import { TestRunCreatePage } from '@/features/testing/TestRunForm'
+import { TestRunsPage } from '@/features/testing/TestRunsPage'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -67,6 +70,9 @@ export const routes: RouteObject[] = [
               { path: 'tests/plans', element: <TestPlansPage /> },
               { path: 'tests/plans/new', element: <TestPlanCreatePage /> },
               { path: 'tests/plans/:testPlanId', element: <TestPlanEditPage /> },
+              { path: 'tests/runs', element: <TestRunsPage /> },
+              { path: 'tests/runs/new', element: <TestRunCreatePage /> },
+              { path: 'tests/runs/:testRunId', element: <TestRunDetailPage /> },
             ],
           },
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },

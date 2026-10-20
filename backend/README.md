@@ -346,6 +346,31 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   planos a releases fica para o DEV-022. A migration `0005_test_collections` cria as collections
   `test_cases` e `test_plans`.
 
+### Execuções de testes e evidências
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/test-runs?projectId=` | `tests:read` + acesso | Filtros `testCaseId`, `testPlanId`, `result` (repetível) e `executedBy` (`me` ou id); `sort` `executedAt` (omissão `-executedAt`); paginado |
+| `POST /api/test-runs` | `tests:execute` + acesso | `{testCaseId, testPlanId?, result, actualResult?, notes?, environment?, executedAt?}` → 201; auditoria `test_run.created` |
+| `GET /api/test-runs/{id}` | `tests:read` + acesso | Inclui bugs ligados, `canEdit`, `canAddEvidence` e `canCreateBug` |
+| `PATCH /api/test-runs/{id}` | executor (`tests:execute`) ou `tests:manage` | `result`, `actualResult`, `notes`, `environment` + `version`; auditoria `test_run.updated` |
+| `POST /api/test-runs/{id}/bugs` | `issues:write` + acesso | Só com `result=fail`; `{title?, priority?, assigneeId?}` → bug pré-preenchido e ligado à execução (201); auditoria `test_run.bug_created` |
+| `GET /api/test-runs/{id}/evidences` | `tests:read` + acesso | Metadados das evidências |
+| `POST /api/test-runs/{id}/evidences` | executor ou `tests:manage` | `multipart/form-data`, campo `file` → 201; auditoria `test_run_evidence.created` |
+| `GET /api/test-runs/{id}/evidences/{evidenceId}/content` | `tests:read` + acesso | Mesmos cabeçalhos de segurança dos anexos; `?inline=1` só em imagens |
+| `DELETE /api/test-runs/{id}/evidences/{evidenceId}` | quem carregou, `tests:manage` ou Tech Lead do projeto | 204; auditoria `test_run_evidence.deleted` |
+| `GET /api/test-plans/{id}/progress` | `tests:read` + acesso | Último resultado por caso, contagens, `passRate` e regressões |
+
+- Resultados: `pass`, `fail`, `blocked`, `not_run`, `skipped`. A execução guarda um snapshot
+  do número e título do caso; casos `deprecated`, planos fechados, casos fora do plano e
+  `executedAt` no futuro (tolerância de 5 minutos) → 422 com `field`.
+- `passRate` = `pass / (pass + fail + blocked)` entre 0 e 1 (`null` sem execuções relevantes);
+  regressão = execução anterior `pass` e última `fail` no mesmo plano. Casos sem execuções no
+  plano contam como `not_run`.
+- Evidências usam as mesmas validações, limites e armazenamento dos anexos (collection
+  `attachments` com `testRunId`), e por isso entram no `attachments-check`.
+- Até 20 bugs por execução. A migration `0007_test_runs` cria a collection `test_runs`.
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash

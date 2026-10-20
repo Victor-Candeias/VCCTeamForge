@@ -35,7 +35,12 @@ from app.schemas.attachments import Attachment
 from app.schemas.auth import UserSummary
 from app.services.issue_history import HistoryEvent, IssueActivityRecorder
 from app.services.issues import IssueService
-from app.storage.attachments import AttachmentStorage, FileTooLargeError, InvalidStorageKeyError
+from app.storage.attachments import (
+    AttachmentStorage,
+    FileTooLargeError,
+    InvalidStorageKeyError,
+    StoredFile,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +53,60 @@ class AttachmentContent:
     original_name: str
     content_type: str
     is_image: bool
+
+
+@dataclass(frozen=True)
+class StoredUpload:
+    stored: StoredFile
+    original_name: str
+    content_type: str
+    now: datetime
+
+
+def max_size_label(settings: Settings) -> str:
+    return f"{settings.attachments_max_bytes / (1024 * 1024):.0f} MiB"
+
+
+def store_upload(
+    storage: AttachmentStorage,
+    settings: Settings,
+    project_id: str,
+    filename: str | None,
+    source: BinaryIO,
+) -> StoredUpload:
+    """Valida nome, tipo, tamanho e assinatura e grava o ficheiro (partilhado com evidências)."""
+    original_name = sanitize_filename(filename)
+    if not original_name:
+        raise BusinessRuleError("O ficheiro tem de ter nome", field="file")
+    allowed = allowed_type_for(original_name)
+    if allowed is None:
+        raise BusinessRuleError(
+            f"Tipo de ficheiro não permitido (aceites: {ALLOWED_EXTENSIONS})", field="file"
+        )
+
+    now = datetime.now(UTC)
+    try:
+        stored = storage.save(
+            project_id,
+            source,
+            max_bytes=settings.attachments_max_bytes,
+            now=now,
+            head_bytes=SIGNATURE_HEAD_BYTES,
+        )
+    except FileTooLargeError as error:
+        raise PayloadTooLargeError(
+            f"O ficheiro excede o máximo de {max_size_label(settings)}", field="file"
+        ) from error
+
+    invalid = stored.size == 0 or not matches_signature(allowed.kind, stored.head)
+    if allowed.kind is ContentKind.TEXT and stored.has_null_bytes:
+        invalid = True
+    if invalid:
+        storage.delete(stored.storage_key)
+        raise BusinessRuleError(
+            "O conteúdo do ficheiro não corresponde ao tipo indicado", field="file"
+        )
+    return StoredUpload(stored, original_name, allowed.content_type, now)
 
 
 class AttachmentService:
@@ -76,45 +135,17 @@ class AttachmentService:
                 f"A issue já tem o máximo de {self.settings.attachments_max_per_issue} anexos",
                 field="file",
             )
-        original_name = sanitize_filename(filename)
-        if not original_name:
-            raise BusinessRuleError("O ficheiro tem de ter nome", field="file")
-        allowed = allowed_type_for(original_name)
-        if allowed is None:
-            raise BusinessRuleError(
-                f"Tipo de ficheiro não permitido (aceites: {ALLOWED_EXTENSIONS})", field="file"
-            )
-
-        now = datetime.now(UTC)
-        try:
-            stored = self.storage.save(
-                str(issue["projectId"]),
-                source,
-                max_bytes=self.settings.attachments_max_bytes,
-                now=now,
-                head_bytes=SIGNATURE_HEAD_BYTES,
-            )
-        except FileTooLargeError as error:
-            raise PayloadTooLargeError(
-                f"O ficheiro excede o máximo de {self._max_size_label()}", field="file"
-            ) from error
-
-        invalid = stored.size == 0 or not matches_signature(allowed.kind, stored.head)
-        if allowed.kind is ContentKind.TEXT and stored.has_null_bytes:
-            invalid = True
-        if invalid:
-            self.storage.delete(stored.storage_key)
-            raise BusinessRuleError(
-                "O conteúdo do ficheiro não corresponde ao tipo indicado", field="file"
-            )
-
+        upload = store_upload(
+            self.storage, self.settings, str(issue["projectId"]), filename, source
+        )
+        stored, original_name, now = upload.stored, upload.original_name, upload.now
         document = {
             "issueId": issue["_id"],
             "projectId": issue["projectId"],
             "uploadedBy": user.id,
             "originalName": original_name,
             "storageKey": stored.storage_key,
-            "contentType": allowed.content_type,
+            "contentType": upload.content_type,
             "size": stored.size,
             "sha256": stored.sha256,
             "createdAt": now,
@@ -196,9 +227,6 @@ class AttachmentService:
                 "size": attachment["size"],
             },
         )
-
-    def _max_size_label(self) -> str:
-        return f"{self.settings.attachments_max_bytes / (1024 * 1024):.0f} MiB"
 
     @staticmethod
     def _ensure_writable(project: dict[str, Any]) -> None:

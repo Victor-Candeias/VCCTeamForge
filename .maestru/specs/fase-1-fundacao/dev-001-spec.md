@@ -44,8 +44,8 @@ Cria a base do backend (monólito modular FastAPI) definida no README §2 e §7,
 | Create | `backend/tests/test_app.py` | Smoke test de `create_app()` e `/api/health` |
 | Run | `pytest`, `ruff check` | Validação |
 
-- [ ] `pytest` passa
-- [ ] `ruff check` sem erros
+- [x] `pytest` passa
+- [x] `ruff check` sem erros
 
 ## Impacted Files
 

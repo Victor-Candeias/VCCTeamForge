@@ -17,7 +17,7 @@ status: active
 | ID | Title | Status | Created | Owner | Priority | Completed | Template | Blocked By | Spec |
 |---|---|---|---|---|---|---|---|---|---|
 | DEV-001 | Criar projeto backend modular em Python/FastAPI | done | 2026-10-20 | developer | high | 2026-10-20 |  |  | [DEV-001](../specs/fase-1-fundacao/dev-001-spec.md) |
-| DEV-002 | Criar projeto React/Vite/TypeScript | backlog | 2026-10-20 | developer | high |  |  |  |  |
+| DEV-002 | Criar projeto React/Vite/TypeScript | done | 2026-10-20 | developer | high | 2026-10-20 |  |  | [DEV-002](../specs/fase-1-fundacao/dev-002-spec.md) |
 | DEV-003 | Implementar configuração por ambiente | backlog | 2026-10-20 | developer | high |  |  | DEV-001 |  |
 | DEV-004 | Implementar acesso MongoDB 4.4 com PyMongo e testes de compatibilidade | backlog | 2026-10-20 | developer | critical |  |  | DEV-001, DEV-003 |  |
 | DEV-005 | Criar migrations/seeds e índices idempotentes | backlog | 2026-10-20 | developer | high |  |  | DEV-004 |  |

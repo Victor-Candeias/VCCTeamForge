@@ -16,7 +16,7 @@ status: active
 <!-- maestru:work-items-list -->
 | ID | Title | Status | Created | Owner | Priority | Completed | Template | Blocked By | Spec |
 |---|---|---|---|---|---|---|---|---|---|
-| DEV-009 | CRUD de projetos e associação de membros | backlog | 2026-10-20 | developer | high |  |  | fase-1-fundacao/DEV-006 |  |
+| DEV-009 | CRUD de projetos e associação de membros | backlog | 2026-10-20 | developer | high |  |  | fase-1-fundacao/DEV-006 | [DEV-009](../specs/fase-2-projetos-issues/dev-009-spec.md) |
 | DEV-010 | CRUD de issues com numeração atómica | backlog | 2026-10-20 | developer | high |  |  | DEV-009 |  |
 | DEV-011 | Filtros, paginação e ordenação | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 |  |
 | DEV-012 | Comentários, histórico e auditoria | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 |  |

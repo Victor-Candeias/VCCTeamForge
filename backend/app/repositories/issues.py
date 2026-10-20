@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from bson import ObjectId
-from pymongo import ReturnDocument
+from pymongo import ASCENDING, DESCENDING, ReturnDocument, UpdateOne
 
 from app.repositories.base import MongoRepository
 
@@ -60,3 +60,42 @@ class IssueRepository(MongoRepository):
             {"$set": {**set_fields, "updatedAt": now}, "$inc": {"version": 1}},
             return_document=ReturnDocument.AFTER,
         )
+
+    # Ordem manual (rank) -------------------------------------------------------------------
+
+    def max_rank(self, project_id: ObjectId) -> float:
+        document = self.collection.find_one(
+            {"projectId": project_id, "rank": {"$ne": None}},
+            {"rank": 1},
+            sort=[("rank", DESCENDING), ("_id", DESCENDING)],
+        )
+        return float(document["rank"]) if document else 0.0
+
+    def neighbour(
+        self, issue: dict[str, Any], *, below: bool, exclude_id: ObjectId
+    ) -> dict[str, Any] | None:
+        """Issue imediatamente acima (``below=False``) ou abaixo na ordem ``(rank, _id)``."""
+        op, direction = ("$gt", ASCENDING) if below else ("$lt", DESCENDING)
+        query = {
+            "projectId": issue["projectId"],
+            "_id": {"$ne": exclude_id},
+            "$or": [
+                {"rank": {op: issue["rank"]}},
+                {"rank": issue["rank"], "_id": {op: issue["_id"]}},
+            ],
+        }
+        return self.collection.find_one(
+            query, {"rank": 1}, sort=[("rank", direction), ("_id", direction)]
+        )
+
+    def renormalize_ranks(self, project_id: ObjectId, step: float) -> None:
+        """Volta a espaçar os ranks do projeto (mantendo a ordem atual)."""
+        cursor = self.collection.find({"projectId": project_id}, {"_id": 1}).sort(
+            [("rank", ASCENDING), ("_id", ASCENDING)]
+        )
+        operations = [
+            UpdateOne({"_id": document["_id"]}, {"$set": {"rank": (index + 1) * step}})
+            for index, document in enumerate(cursor)
+        ]
+        if operations:
+            self.collection.bulk_write(operations, ordered=False)

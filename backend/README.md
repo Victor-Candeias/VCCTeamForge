@@ -231,6 +231,23 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 - `python -m app.cli attachments-check` reporta ficheiros órfãos e anexos ativos sem ficheiro
   (código de saída 1 se houver inconsistências).
 
+### Backlog e quadro
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `POST /api/issues/{id}/rank` | `issues:write` + regra de edição | `{beforeId?, afterId?, version}` → `IssueSummary`; sem histórico |
+| `GET /api/projects/{id}/board` | `issues:read` + acesso | Filtros da pesquisa (`assigneeId`, `type`, `label`, `q`…); `status` é ignorado |
+
+- **Ordem manual:** campo `rank` (float). Novas issues ficam no fim (`max(rank) + 1024`);
+  `sort=rank` na pesquisa. `beforeId` coloca a issue acima dessa issue e `afterId` abaixo
+  (ambos: tem de valer `afterId` antes de `beforeId`, senão 422). Vizinhos inexistentes, de
+  outro projeto ou a própria issue → 422 com `field`. O novo rank é o ponto médio; se o
+  intervalo for < 1e-6, os ranks do projeto são renormalizados (passo 1024) e o cálculo repete.
+- **Quadro:** uma coluna por estado (`todo…done`) ordenada por `rank`, até 200 issues por
+  coluna (`total` e `truncated`); `done` só mostra as concluídas nos últimos 14 dias. Mover no
+  quadro usa `PATCH /api/issues/{id}` (`status` + `version`, transições validadas).
+- A migration `0003_issue_rank` atribui `rank` às issues existentes sem rank (por `number`).
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash

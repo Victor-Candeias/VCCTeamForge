@@ -6,7 +6,9 @@ from app.api.deps import get_db, parse_object_id, require_permissions
 from app.domain.permissions import Permission
 from app.domain.projects import ProjectStatus
 from app.domain.users import User
+from app.schemas.board import Board
 from app.schemas.common import Page, PageParams, parse_sort
+from app.schemas.issue_search import IssueSearchQuery
 from app.schemas.projects import (
     MemberAdd,
     ProjectCreate,
@@ -152,3 +154,20 @@ def list_labels(
     """Labels distintas usadas nas issues do projeto (para filtros)."""
     response.headers["Cache-Control"] = "no-store"
     return IssueService(db).project_labels(user, _project_id(project_id))
+
+
+@router.get("/{board_project_id}/board", response_model=Board)
+def get_board(
+    board_project_id: str,
+    response: Response,
+    query: IssueSearchQuery = Depends(IssueSearchQuery.from_query),
+    user: User = Depends(can_read_issues),
+    db: Database = Depends(get_db),
+) -> Board:
+    """Quadro Kanban: filtros iguais aos da pesquisa de issues (o estado define a coluna).
+
+    O parâmetro de caminho não se chama ``project_id`` porque colide com o filtro
+    ``projectId`` da pesquisa (ignorado aqui: vale o projeto do caminho).
+    """
+    response.headers["Cache-Control"] = "no-store"
+    return IssueService(db).board(user, _project_id(board_project_id), query)

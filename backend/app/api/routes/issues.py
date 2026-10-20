@@ -7,6 +7,7 @@ from app.api.deps import get_db, require_permissions
 from app.core.errors import NotFoundError
 from app.domain.permissions import Permission
 from app.domain.users import User
+from app.schemas.board import RankMove
 from app.schemas.comments import Comment, CommentInput
 from app.schemas.common import Page, PageParams
 from app.schemas.history import HistoryEvent
@@ -98,6 +99,16 @@ def update_issue(
     service: IssueService = Depends(get_issue_service),
 ) -> Issue:
     return service.update(user, issue_object_id(issue_id), data)
+
+
+@router.post("/{issue_id}/rank", response_model=IssueSummary)
+def move_issue_rank(
+    issue_id: str,
+    data: RankMove,
+    user: User = Depends(can_write),
+    service: IssueService = Depends(get_issue_service),
+) -> IssueSummary:
+    return service.move_rank(user, issue_object_id(issue_id), data)
 
 
 @router.get("/{issue_id}/comments", response_model=Page[Comment])

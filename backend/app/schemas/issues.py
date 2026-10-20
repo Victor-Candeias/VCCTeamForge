@@ -72,6 +72,7 @@ class IssueSummary(ApiModel):
     due_date: date | None
     parent_issue_id: str | None
     sprint_id: str | None
+    rank: float | None = None
     updated_at: datetime
     version: int
 

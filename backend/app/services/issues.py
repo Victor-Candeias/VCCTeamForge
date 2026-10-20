@@ -1,8 +1,9 @@
-"""Criação, pesquisa e edição de issues (DEV-010, DEV-011, DEV-012)."""
+"""Criação, pesquisa, edição, ordem manual e quadro de issues (DEV-010 a DEV-014)."""
 
 import re
 from collections.abc import Iterable
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from bson import ObjectId
@@ -31,6 +32,7 @@ from app.repositories.issues import IssueRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.users import UserRepository
 from app.schemas.auth import UserSummary
+from app.schemas.board import Board, BoardColumn, RankMove
 from app.schemas.common import PageParams
 from app.schemas.issue_search import IssueSearchQuery
 from app.schemas.issues import Issue, IssueCreate, IssueRef, IssueSummary, IssueUpdate
@@ -78,10 +80,17 @@ SUMMARY_PROJECTION = {
         "dueDate",
         "parentIssueId",
         "sprintId",
+        "rank",
         "updatedAt",
         "version",
     )
 }
+
+# Ordem manual: novas issues no fim, com espaço para inserir entre vizinhos.
+RANK_STEP = 1024.0
+RANK_MIN_GAP = 1e-6
+BOARD_COLUMN_LIMIT = 200
+BOARD_DONE_WINDOW_DAYS = 14
 
 ISSUE_KEY_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9]{1,9}-\d+")
 
@@ -161,6 +170,39 @@ class IssueService:
                 mongo_filter.update(title)
         return mongo_filter
 
+    def board(self, user: User, project_id: ObjectId, query: IssueSearchQuery) -> Board:
+        """Colunas por estado ordenadas por ``rank`` (``done`` só dos últimos dias)."""
+        base = self.build_search_filter(user, replace(query, project_id=project_id, statuses=[]))
+        done_since = datetime.now(UTC) - timedelta(days=BOARD_DONE_WINDOW_DAYS)
+        columns = []
+        for status in IssueStatus:
+            column_filter = {**base, "status": status.value}
+            if status is IssueStatus.DONE:
+                column_filter["completedAt"] = {"$gte": done_since}
+            documents = self.issues.search(
+                column_filter,
+                sort=[("rank", 1), ("_id", 1)],
+                skip=0,
+                limit=BOARD_COLUMN_LIMIT,
+                projection=SUMMARY_PROJECTION,
+            )
+            total = len(documents)
+            if total >= BOARD_COLUMN_LIMIT:
+                total = self.issues.count(column_filter)
+            columns.append(
+                BoardColumn(
+                    status=status,
+                    items=self.to_summaries(documents),
+                    total=total,
+                    truncated=total > BOARD_COLUMN_LIMIT,
+                )
+            )
+        return Board(
+            columns=columns,
+            column_limit=BOARD_COLUMN_LIMIT,
+            done_window_days=BOARD_DONE_WINDOW_DAYS,
+        )
+
     def project_labels(self, user: User, project_id: ObjectId) -> list[str]:
         project = ensure_project_access(user, self.projects.find_by_id(project_id))
         return self.issues.distinct_labels(project["_id"])
@@ -205,6 +247,7 @@ class IssueService:
             "reporterId": user.id,
             "parentIssueId": parent["_id"] if parent else None,
             "sprintId": None,
+            "rank": self.issues.max_rank(project_id) + RANK_STEP,
             "storyPoints": story_points,
             "labels": labels,
             "acceptanceCriteria": criteria,
@@ -273,6 +316,67 @@ class IssueService:
         )
         return updated, diff
 
+    def move_rank(self, user: User, issue_id: ObjectId, data: RankMove) -> IssueSummary:
+        """Coloca a issue entre vizinhos do mesmo projeto (ordem do backlog/quadro)."""
+        issue, project = self.get_accessible(user, issue_id)
+        if not can_edit_issue(user, issue):
+            raise ForbiddenError("Só pode ordenar issues atribuídas a si ou que reportou")
+        self._ensure_not_archived(project)
+        self._check_version(issue, data.version)
+        rank = self._rank_between(issue, data)
+        updated = self.require_updated(
+            self.issues.update_versioned(
+                issue["_id"], data.version, now=datetime.now(UTC), set_fields={"rank": rank}
+            ),
+            issue["_id"],
+        )
+        return self.to_summaries([updated])[0]
+
+    def _rank_between(self, issue: dict[str, Any], data: RankMove) -> float:
+        # Segunda tentativa só depois de renormalizar (intervalo esgotado ou ranks em falta).
+        for attempt in range(2):
+            before = self._rank_reference(issue, data.before_id, "beforeId")
+            after = self._rank_reference(issue, data.after_id, "afterId")
+            references = [doc for doc in (before, after) if doc is not None]
+            if all(doc.get("rank") is not None for doc in references):
+                if before is not None and after is not None:
+                    lower, upper = after, before
+                    if (lower["rank"], lower["_id"]) >= (upper["rank"], upper["_id"]):
+                        raise BusinessRuleError(
+                            "afterId tem de estar antes de beforeId na ordem atual",
+                            field="beforeId",
+                        )
+                elif before is not None:
+                    upper = before
+                    lower = self.issues.neighbour(before, below=False, exclude_id=issue["_id"])
+                else:
+                    lower = after
+                    upper = self.issues.neighbour(after, below=True, exclude_id=issue["_id"])
+                if lower is None:
+                    return float(upper["rank"]) - RANK_STEP
+                if upper is None:
+                    return float(lower["rank"]) + RANK_STEP
+                if upper["rank"] - lower["rank"] >= RANK_MIN_GAP:
+                    return (float(lower["rank"]) + float(upper["rank"])) / 2
+            if attempt == 0:
+                self.issues.renormalize_ranks(issue["projectId"], RANK_STEP)
+        raise ConflictError("Não foi possível calcular a nova posição. Tente novamente.")
+
+    def _rank_reference(
+        self, issue: dict[str, Any], value: str | None, field: str
+    ) -> dict[str, Any] | None:
+        if not value:
+            return None
+        reference_id = object_id_or_422(value, field)
+        if reference_id == issue["_id"]:
+            raise BusinessRuleError("A issue não pode ser posicionada em relação a si", field=field)
+        reference = self.issues.find_by_id(reference_id)
+        if reference is None or reference["projectId"] != issue["projectId"]:
+            raise BusinessRuleError(
+                "A issue de referência tem de existir no mesmo projeto", field=field
+            )
+        return reference
+
     # Conversão -----------------------------------------------------------------------------
 
     def to_summaries(self, issues: Iterable[dict[str, Any]]) -> list[IssueSummary]:
@@ -333,6 +437,7 @@ class IssueService:
             "due_date": datetime_to_date(issue.get("dueDate")),
             "parent_issue_id": str(issue["parentIssueId"]) if issue.get("parentIssueId") else None,
             "sprint_id": str(issue["sprintId"]) if issue.get("sprintId") else None,
+            "rank": issue.get("rank"),
             "updated_at": issue["updatedAt"],
             "version": issue.get("version", 1),
         }

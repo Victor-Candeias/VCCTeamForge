@@ -61,7 +61,7 @@ Vistas de backlog ordenável e quadro Kanban por estado (README §4.3 "Vistas: t
 | Modify | `frontend/src/app/router.tsx` | `/projects/:projectId/backlog`, `/projects/:projectId/board` |
 | Create | `frontend/src/features/issues/board.test.tsx` | Mover por menu, reversão em 422, reordenação do backlog |
 
-- [ ] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
+- [x] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
 - [ ] Critérios MVP "Criar, pesquisar e atualizar issues" e "Marcar e consultar impedimentos" verificados na UI
 
 ## Impacted Files

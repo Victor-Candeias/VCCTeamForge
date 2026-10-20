@@ -81,6 +81,17 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
   (`?inline=1`), upload com `issues:write` (limite de 20 MiB validado também no cliente) e
   remoção em dois passos quando `canDelete`. `apiFetch` não define `Content-Type` para `FormData`.
 
+## Backlog e quadro
+
+| Rota | Página |
+|------|--------|
+| `/projects/:projectId/backlog` | Issues sem sprint e por concluir ordenadas por `rank`: arrastar e largar ou botões Topo/Subir/Descer, filtro por tipo e criação rápida no fim |
+| `/projects/:projectId/board` | Quadro Kanban por estado: cartões (`IssueCard`) com tipo, prioridade, responsável e bloqueio, contadores, aviso de truncagem; mover arrastando entre colunas ou pelo menu "Mover para…" |
+
+- As mudanças são otimistas: em erro (409/422) a vista reverte, mostra a mensagem e recarrega.
+- O menu e o arrastar só oferecem as transições de `issueTransitions` (espelho do backend);
+  a reordenação envia os vizinhos (`afterId`/`beforeId`) calculados por `reorder`.
+
 ## Auditoria
 
 `/admin/audit` (entrada "Auditoria" no menu só com `audit:read`): tabela paginada com filtros

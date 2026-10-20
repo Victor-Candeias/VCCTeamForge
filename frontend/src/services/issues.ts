@@ -23,6 +23,15 @@ export const issueStatusLabels: Record<IssueStatus, string> = {
 }
 
 export const issueStatuses = Object.keys(issueStatusLabels) as IssueStatus[]
+
+/** Transições permitidas (espelho do backend, que valida sempre). */
+export const issueTransitions: Record<IssueStatus, IssueStatus[]> = {
+  todo: ['in_progress'],
+  in_progress: ['todo', 'code_review', 'testing', 'done'],
+  code_review: ['in_progress', 'testing', 'done'],
+  testing: ['in_progress', 'code_review', 'done'],
+  done: ['in_progress'],
+}
 export const issueTypes = Object.keys(issueTypeLabels) as IssueType[]
 
 export type IssueRef = {
@@ -49,6 +58,7 @@ export type IssueSummary = {
   dueDate: string | null
   parentIssueId: string | null
   sprintId: string | null
+  rank: number | null
   updatedAt: string
   version: number
 }
@@ -81,7 +91,10 @@ export type IssueFields = {
   dependsOnIssueIds?: string[]
 }
 
-export type IssueCreateInput = IssueFields & { projectId: string; type: IssueType }
+export type IssueCreateInput = IssueFields & {
+  projectId: string
+  type: IssueType
+}
 
 export type IssueUpdateInput = Partial<IssueFields> & {
   version: number
@@ -121,6 +134,7 @@ export const issueSortFields = [
   'updatedAt',
   'createdAt',
   'dueDate',
+  'rank',
 ] as const
 export type IssueSortField = (typeof issueSortFields)[number]
 
@@ -137,9 +151,48 @@ export function getIssueByKey(key: string) {
 }
 
 export function createIssue(input: IssueCreateInput) {
-  return apiFetch<Issue>('/issues', { method: 'POST', body: JSON.stringify(input) })
+  return apiFetch<Issue>('/issues', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
 
 export function updateIssue(issueId: string, input: IssueUpdateInput) {
-  return apiFetch<Issue>(`/issues/${issueId}`, { method: 'PATCH', body: JSON.stringify(input) })
+  return apiFetch<Issue>(`/issues/${issueId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+/** Posição manual: `beforeId` = fica acima dessa issue; `afterId` = fica abaixo. */
+export type RankMoveInput = {
+  beforeId?: string
+  afterId?: string
+  version: number
+}
+
+export function moveIssueRank(issueId: string, input: RankMoveInput) {
+  return apiFetch<IssueSummary>(`/issues/${issueId}/rank`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export type BoardColumn = {
+  status: IssueStatus
+  items: IssueSummary[]
+  total: number
+  truncated: boolean
+}
+
+export type Board = {
+  columns: BoardColumn[]
+  columnLimit: number
+  doneWindowDays: number
+}
+
+export type BoardParams = Pick<IssueSearchParams, 'assigneeId' | 'type' | 'label' | 'q'>
+
+export function getBoard(projectId: string, params: BoardParams = {}) {
+  return apiFetch<Board>(`/projects/${projectId}/board${toQueryString(params)}`)
 }

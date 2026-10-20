@@ -8,6 +8,8 @@ import { RequireAuth } from '@/features/auth/RequireAuth'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { IssueDetailPage } from '@/features/issues/IssueDetailPage'
 import { IssueCreatePage, IssueEditPage } from '@/features/issues/IssueForm'
+import { BacklogPage } from '@/features/issues/BacklogPage'
+import { BoardPage } from '@/features/issues/BoardPage'
 import { ProjectIssuesPage } from '@/features/issues/ProjectIssuesPage'
 import { ProjectCreatePage, ProjectEditPage } from '@/features/projects/ProjectForm'
 import { ProjectLayout } from '@/features/projects/ProjectLayout'
@@ -35,6 +37,8 @@ export const routes: RouteObject[] = [
               { index: true, element: <ProjectSummaryPage /> },
               { path: 'members', element: <ProjectMembers /> },
               { path: 'issues', element: <ProjectIssuesPage /> },
+              { path: 'backlog', element: <BacklogPage /> },
+              { path: 'board', element: <BoardPage /> },
               { path: 'issues/new', element: <IssueCreatePage /> },
             ],
           },

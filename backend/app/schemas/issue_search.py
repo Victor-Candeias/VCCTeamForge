@@ -19,6 +19,7 @@ ISSUE_SORT_FIELDS = {
     "createdAt": "createdAt",
     "title": "title",
     "dueDate": "dueDate",
+    "rank": "rank",
 }
 DEFAULT_ISSUE_SORT = "-number"
 SEARCH_TEXT_MAX_LENGTH = 100

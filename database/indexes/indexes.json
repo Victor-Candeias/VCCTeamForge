@@ -29,6 +29,12 @@
     {"collection": "sprints", "name": "sprints_projectId_nameKey_unique", "keys": [["projectId", 1], ["nameKey", 1]], "options": {"unique": true}},
     {"collection": "sprints", "name": "sprints_projectId_startDate", "keys": [["projectId", 1], ["startDate", -1]]},
 
+    {"collection": "test_cases", "name": "test_cases_projectId_number_unique", "keys": [["projectId", 1], ["number", 1]], "options": {"unique": true}},
+    {"collection": "test_cases", "name": "test_cases_projectId_status", "keys": [["projectId", 1], ["status", 1]]},
+    {"collection": "test_cases", "name": "test_cases_issueIds", "keys": [["issueIds", 1]]},
+    {"collection": "test_plans", "name": "test_plans_projectId_nameKey_unique", "keys": [["projectId", 1], ["nameKey", 1]], "options": {"unique": true}},
+    {"collection": "test_plans", "name": "test_plans_projectId_createdAt", "keys": [["projectId", 1], ["createdAt", -1]]},
+
     {"collection": "test_runs", "name": "test_runs_projectId_executedAt", "keys": [["projectId", 1], ["executedAt", -1]]},
 
     {"collection": "sessions", "name": "sessions_tokenHash_unique", "keys": [["tokenHash", 1]], "options": {"unique": true}},

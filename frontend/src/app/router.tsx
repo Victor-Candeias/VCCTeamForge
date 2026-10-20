@@ -18,6 +18,10 @@ import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { ProjectSummaryPage } from '@/features/projects/ProjectSummaryPage'
 import { SprintCreatePage, SprintEditPage } from '@/features/sprints/SprintForm'
 import { SprintsPage } from '@/features/sprints/SprintsPage'
+import { TestCaseCreatePage, TestCaseEditPage } from '@/features/testing/TestCaseForm'
+import { TestCasesPage } from '@/features/testing/TestCasesPage'
+import { TestPlanCreatePage, TestPlanEditPage } from '@/features/testing/TestPlanForm'
+import { TestPlansPage } from '@/features/testing/TestPlansPage'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -45,6 +49,12 @@ export const routes: RouteObject[] = [
               { path: 'sprints', element: <SprintsPage /> },
               { path: 'sprints/new', element: <SprintCreatePage /> },
               { path: 'sprints/:sprintId/edit', element: <SprintEditPage /> },
+              { path: 'tests', element: <TestCasesPage /> },
+              { path: 'tests/cases/new', element: <TestCaseCreatePage /> },
+              { path: 'tests/cases/:testCaseId', element: <TestCaseEditPage /> },
+              { path: 'tests/plans', element: <TestPlansPage /> },
+              { path: 'tests/plans/new', element: <TestPlanCreatePage /> },
+              { path: 'tests/plans/:testPlanId', element: <TestPlanEditPage /> },
             ],
           },
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },

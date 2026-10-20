@@ -52,7 +52,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 |------|--------|
 | `/projects` | Lista paginada com pesquisa, filtro de estado e "incluir arquivados" |
 | `/projects/new`, `/projects/:projectId/edit` | Formulário partilhado (react-hook-form + zod); a chave só é editável na criação |
-| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Issues, Backlog, Quadro, Sprints, Membros; os restantes aparecem desativados até serem implementados |
+| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Issues, Backlog, Quadro, Sprints, Testes, Membros; os restantes aparecem desativados até serem implementados |
 | `/projects/:projectId/members` | Membros; adicionar com pesquisa (`GET /api/users`) e remover (exceto o responsável) |
 
 - As ações de gestão aparecem conforme `usePermission('projects:manage')` e o `canManage`
@@ -103,6 +103,20 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - "Novo sprint" e "Editar" só aparecem com `sprints:manage`, projeto não arquivado e `canEdit`.
 - A validação zod espelha o backend (fim ≥ início, máximo de 60 dias); os erros 409/422 do
   servidor aparecem no campo indicado em `field`.
+
+## Testes
+
+| Rota | Página |
+|------|--------|
+| `/projects/:projectId/tests` | Separador "Testes": casos de teste com pesquisa (debounce), filtros de estado e prioridade |
+| `/projects/:projectId/tests/cases/new` | Criação de caso: passos ordenáveis, resultado esperado, labels e issues ligadas |
+| `/projects/:projectId/tests/cases/:testCaseId` | Detalhe/edição (envia `version`); sem `tests:manage` fica só de consulta |
+| `/projects/:projectId/tests/plans` | Lista de planos de teste com filtro de estado |
+| `/projects/:projectId/tests/plans/new` | Criação de plano: escolher casos (`draft`/`ready`) e ordená-los |
+| `/projects/:projectId/tests/plans/:testPlanId` | Edição; num plano fechado só é possível mudar o estado para o reabrir |
+
+- Os botões de criação e edição só aparecem com `tests:manage`, projeto não arquivado e `canEdit`.
+- Os erros 409/422 do servidor aparecem no campo indicado em `field`.
 
 ## Auditoria
 

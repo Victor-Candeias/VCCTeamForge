@@ -267,6 +267,30 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 - `projectId` inválido ou sem acesso no corpo → 422 (`field=projectId`); `GET /api/sprints`
   sem `projectId` → 422. A migration `0004_sprint_collections` cria a collection `sprints`.
 
+### Casos e planos de teste
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/test-cases?projectId=` | `tests:read` + acesso | Filtros `status`, `priority`, `label` (repetíveis), `issueId` e `q` (título ou `TC-n`); `sort` `number`/`title`/`priority`/`updatedAt`; paginado |
+| `POST /api/test-cases` | `tests:manage` + acesso | `{projectId, title, description?, preconditions?, steps[], expectedResult?, priority?, status?, labels?, issueIds?}` → 201; auditoria `test_case.created` |
+| `GET /api/test-cases/{id}` | `tests:read` + acesso | Inclui `key` (`TC-n`), issues ligadas e `canEdit` |
+| `PATCH /api/test-cases/{id}` | `tests:manage` + acesso | Campos opcionais + `version`; auditoria `test_case.updated` |
+| `GET /api/test-plans?projectId=` | `tests:read` + acesso | Filtros `status` (repetível) e `q`; `sort` `name`/`createdAt`/`updatedAt` (omissão `-createdAt`); paginado |
+| `POST /api/test-plans` | `tests:manage` + acesso | `{projectId, name, description?, status?, testCaseIds[]}` → 201; auditoria `test_plan.created` |
+| `GET /api/test-plans/{id}` | `tests:read` + acesso | Inclui os casos (ordem do plano) e `canEdit` |
+| `PATCH /api/test-plans/{id}` | `tests:manage` + acesso | Campos opcionais + `version`; auditoria `test_plan.updated` |
+
+- Casos: estados `draft`, `ready`, `deprecated`; número sequencial por projeto (counter
+  `test_cases:<projectId>`), até 50 passos `{action, expectedResult?}` e 20 issues ligadas do
+  mesmo projeto (422 com `field=issueIds`).
+- Planos: estados `draft`, `active`, `closed`; nome único por projeto sem distinção de
+  maiúsculas → 409 com `field=name`; até 500 casos do mesmo projeto, sem repetições
+  (`field=testCaseIds`). Casos `deprecated` não podem ser adicionados, mas os já incluídos mantêm-se.
+- Plano fechado só aceita mudar o `status` (422 com `field=status`); projeto arquivado → só leitura.
+- Nas alterações a textos longos a auditoria regista apenas `{changed: true}`. A ligação de
+  planos a releases fica para o DEV-022. A migration `0005_test_collections` cria as collections
+  `test_cases` e `test_plans`.
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash

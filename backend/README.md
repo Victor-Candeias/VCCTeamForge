@@ -301,6 +301,27 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   (o limite de 300 issues não se aplica; falhas individuais ficam no log) e auditoria. Depois
   do fecho o compromisso compara com o snapshot de fecho.
 
+### Relatório de sprint
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/reports/sprints/{id}` | `reports:read` + acesso | KPIs, burndown, distribuição por estado, bloqueios e velocidade; sprint `planned` → 422 `field=status` |
+
+- **Snapshots diários (DEV-019):** `sprint_snapshots` `kind: "daily"`, um por dia (substituído
+  ao longo do dia). Gravados no início, ao associar/remover issues de um sprint ativo (também
+  no sprint de origem), quando uma issue de um sprint ativo muda `status`/`storyPoints` e no
+  fecho (antes do transporte). São best-effort: uma falha fica no log e não anula o pedido.
+- `kpis`: compromisso, âmbito atual, concluídas, SP restantes, `progressPercent` (SP concluídos
+  / âmbito; `null` sem SP), dias totais/decorridos/restantes, bloqueadas e adicionadas/
+  retiradas face ao compromisso. Sprint fechado → dados do snapshot de fecho.
+- `burndown`: um ponto por dia entre o início (ou o dia em que foi iniciado, se antes) e o fim
+  (ou hoje/dia do fecho, se depois). `ideal` desce linearmente do compromisso a 0; `remaining`
+  e `scope` vêm do último snapshot até esse dia (hoje, num sprint ativo, das issues atuais);
+  dias futuros ou sem snapshot → `null`.
+- `velocity`: até 5 sprints fechados do projeto com início até ao deste, com compromisso,
+  concluído, concluído do compromisso e `predictabilityPercent`; `averageVelocity` = média dos
+  concluídos.
+
 ### Casos e planos de teste
 
 | Método e rota | Permissão | Notas |

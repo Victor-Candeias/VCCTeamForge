@@ -321,6 +321,11 @@ export function SprintDetailPage() {
               <Link to={`/projects/${project.id}/board?sprintId=${data.id}`}>Ver quadro</Link>
             </Button>
           )}
+          {data.startedAt !== null && (
+            <Button variant="outline" asChild>
+              <Link to={`/projects/${project.id}/sprints/${data.id}/dashboard`}>Ver dashboard</Link>
+            </Button>
+          )}
           {data.canEdit && data.status === 'active' && (
             <Button asChild>
               <Link to={`/projects/${project.id}/sprints/${data.id}/close`}>Fechar sprint</Link>

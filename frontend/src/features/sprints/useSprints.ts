@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { getSprintReport } from '@/services/reports'
 import {
   addSprintIssues,
   closeSprint,
@@ -20,6 +21,7 @@ export const sprintKeys = {
   list: (filters: SprintFilters) => ['sprints', 'list', filters] as const,
   detail: (sprintId: string) => ['sprints', 'detail', sprintId] as const,
   commitment: (sprintId: string) => ['sprints', 'commitment', sprintId] as const,
+  report: (sprintId: string) => ['sprints', 'report', sprintId] as const,
 }
 
 export function useSprints(filters: SprintFilters) {
@@ -118,7 +120,18 @@ export function useCloseSprint(sprintId: string) {
       update(sprint)
       void queryClient.invalidateQueries({ queryKey: ['sprints', 'detail'] })
       void queryClient.invalidateQueries({ queryKey: sprintKeys.commitment(sprintId) })
+      void queryClient.invalidateQueries({ queryKey: sprintKeys.report(sprintId) })
       void queryClient.invalidateQueries({ queryKey: ['issues'] })
     },
+  })
+}
+
+export function useSprintReport(sprintId: string, enabled = true) {
+  return useQuery({
+    queryKey: sprintKeys.report(sprintId),
+    queryFn: () => getSprintReport(sprintId),
+    // Depende de alterações às issues feitas noutras páginas: recarrega sempre que abre.
+    staleTime: 0,
+    enabled: enabled && Boolean(sprintId),
   })
 }

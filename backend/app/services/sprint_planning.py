@@ -23,6 +23,7 @@ from app.domain.users import User
 from app.schemas.sprints import SprintIssuesAdd, SprintResponse
 from app.services.common import object_id_or_422
 from app.services.issue_history import HistoryEvent, IssueActivityRecorder
+from app.services.sprint_snapshots import DailySnapshotRecorder
 from app.services.sprints import SprintService
 
 
@@ -30,6 +31,7 @@ class SprintPlanningService(SprintService):
     def __init__(self, db: Database) -> None:
         super().__init__(db)
         self.activity = IssueActivityRecorder(db)
+        self.daily = DailySnapshotRecorder(db)
 
     def add_issues(self, user: User, sprint_id: ObjectId, data: SprintIssuesAdd) -> SprintResponse:
         sprint, project = self._get_plannable(user, sprint_id)
@@ -64,6 +66,10 @@ class SprintPlanningService(SprintService):
             self._move(user, issue, sprint_id, now)
             moved.append(issue["key"])
         self._audit("sprint.issues_added", user, project, sprint, now, {"issueKeys": moved})
+        # Uma issue vinda do sprint ativo também muda o burndown desse sprint.
+        sources = {issue["sprintId"] for issue in to_move if issue.get("sprintId")}
+        for affected in [sprint_id, *sources]:
+            self.daily.record(affected, now)
         return self.to_response(user, project, sprint)
 
     def remove_issue(self, user: User, sprint_id: ObjectId, issue_id: ObjectId) -> SprintResponse:
@@ -74,6 +80,7 @@ class SprintPlanningService(SprintService):
         now = datetime.now(UTC)
         self._move(user, issue, None, now)
         self._audit("sprint.issue_removed", user, project, sprint, now, {"issueKey": issue["key"]})
+        self.daily.record(sprint_id, now)
         return self.to_response(user, project, sprint)
 
     # Auxiliares ----------------------------------------------------------------------------

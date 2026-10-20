@@ -53,6 +53,14 @@ export const routes: RouteObject[] = [
               { path: 'sprints/:sprintId', element: <SprintDetailPage /> },
               { path: 'sprints/:sprintId/edit', element: <SprintEditPage /> },
               { path: 'sprints/:sprintId/close', element: <SprintClosePage /> },
+              {
+                path: 'sprints/:sprintId/dashboard',
+                // Carregada à parte: os gráficos (Recharts) não entram no bundle inicial.
+                lazy: async () => ({
+                  Component: (await import('@/features/sprints/SprintDashboardPage'))
+                    .SprintDashboardPage,
+                }),
+              },
               { path: 'tests', element: <TestCasesPage /> },
               { path: 'tests/cases/new', element: <TestCaseCreatePage /> },
               { path: 'tests/cases/:testCaseId', element: <TestCaseEditPage /> },

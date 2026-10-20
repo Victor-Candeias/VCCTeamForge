@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { routes } from '@/app/router'
 import {
@@ -528,5 +528,137 @@ describe('fecho do sprint', () => {
     expect(screen.getByText('Boa colaboração')).toBeInTheDocument()
     expect(screen.getByText('Rever estimativas')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Fechar sprint' })).not.toBeInTheDocument()
+  })
+})
+
+describe('dashboard do sprint', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+  })
+
+  const report = {
+    sprintId: 's1',
+    name: 'Sprint 1',
+    goal: 'Concluir autenticação',
+    status: 'active',
+    startDate: '2099-01-02',
+    endDate: '2099-01-04',
+    asOf: '2099-01-03T10:00:00Z',
+    kpis: {
+      committedIssueCount: 3,
+      committedStoryPoints: 8,
+      issueCount: 3,
+      storyPoints: 10,
+      unestimatedCount: 1,
+      completedIssueCount: 1,
+      completedStoryPoints: 5,
+      remainingStoryPoints: 5,
+      progressPercent: 50,
+      totalDays: 3,
+      elapsedDays: 2,
+      remainingDays: 1,
+      blockedCount: 1,
+      addedCount: 1,
+      removedCount: 1,
+    },
+    burndown: [
+      { day: '2099-01-02', ideal: 8, remaining: 8, scope: 8 },
+      { day: '2099-01-03', ideal: 4, remaining: 5, scope: 10 },
+      { day: '2099-01-04', ideal: 0, remaining: null, scope: null },
+    ],
+    statusBreakdown: [
+      { status: 'todo', issueCount: 1, storyPoints: 3 },
+      { status: 'in_progress', issueCount: 1, storyPoints: 2 },
+      { status: 'code_review', issueCount: 0, storyPoints: 0 },
+      { status: 'testing', issueCount: 0, storyPoints: 0 },
+      { status: 'done', issueCount: 1, storyPoints: 5 },
+    ],
+    blockedIssues: [
+      {
+        issueId: 'i2',
+        key: 'APP-2',
+        title: 'Logout',
+        status: 'todo',
+        blockReason: 'Aguarda API',
+        blockedAt: '2099-01-03T09:00:00Z',
+      },
+    ],
+    velocity: [
+      {
+        sprintId: 's0',
+        name: 'Sprint 0',
+        committedStoryPoints: 10,
+        completedStoryPoints: 7.5,
+        committedCompletedStoryPoints: 6,
+        predictabilityPercent: 60,
+      },
+    ],
+    averageVelocity: 7.5,
+  }
+
+  it('mostra KPIs, bloqueios e velocidade a partir do detalhe', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(testUser),
+      'GET /api/projects/p1': () => jsonResponse(testProject({ canManage: false })),
+      'GET /api/sprints/s1': () =>
+        jsonResponse(testSprint({ status: 'active', startedAt: '2099-01-02T09:00:00Z', canEdit: false })),
+      'GET /api/sprints/s1/commitment': () =>
+        jsonResponse({
+          sprintId: 's1',
+          takenAt: '2099-01-02T09:00:00Z',
+          issueCount: 0,
+          storyPoints: 0,
+          unestimatedCount: 0,
+          removedCount: 0,
+          addedCount: 0,
+          addedStoryPoints: 0,
+          issues: [],
+          added: [],
+        }),
+      [SPRINT_ISSUES]: () => jsonResponse(pageOf([], 1, 100)),
+      'GET /api/reports/sprints/s1': () => jsonResponse(report),
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/projects/p1/sprints/s1')
+
+    await user.click(await screen.findByRole('link', { name: 'Ver dashboard' }))
+
+    expect(await screen.findByRole('heading', { name: 'Dashboard · Sprint 1' })).toBeInTheDocument()
+    expect(screen.getByText('50%')).toBeInTheDocument()
+    expect(screen.getByText('5 de 10 story points')).toBeInTheDocument()
+    expect(screen.getByText('3 issues · 1 adicionadas, 1 retiradas')).toBeInTheDocument()
+    expect(screen.getByText('2 de 3 dias decorridos')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Gráfico de burndown' })).toBeInTheDocument()
+    expect(screen.getByText('1 · 5 SP')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'APP-2' })).toHaveAttribute('href', '/issues/APP-2')
+    expect(screen.getByText('Aguarda API')).toBeInTheDocument()
+    expect(screen.getByText(/Média: 7,5 story points/)).toBeInTheDocument()
+    expect(screen.getByText('60%')).toBeInTheDocument()
+  })
+
+  it('explica que o dashboard só existe depois do início', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(testUser),
+      'GET /api/projects/p1': () => jsonResponse(testProject({ canManage: false })),
+      'GET /api/sprints/s1': () => jsonResponse(testSprint({ canEdit: false })),
+      'GET /api/reports/sprints/s1': () =>
+        jsonResponse({ title: 'Regra', detail: 'O sprint ainda não foi iniciado', field: 'status' }, 422),
+    })
+    renderRoutes(routes, '/projects/p1/sprints/s1/dashboard')
+
+    expect(
+      await screen.findByText('O dashboard fica disponível depois de iniciar o sprint.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Voltar ao sprint' })).toHaveAttribute(
+      'href',
+      '/projects/p1/sprints/s1',
+    )
   })
 })

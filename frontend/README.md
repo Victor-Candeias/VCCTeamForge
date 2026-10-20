@@ -101,6 +101,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 | `/projects/:projectId/sprints/:sprintId` | Planeamento: totais (issues, story points vs capacidade, sem estimativa, concluídas), issues do sprint e backlog elegível para adicionar/remover; iniciar (com confirmação) e compromisso |
 | `/projects/:projectId/sprints/:sprintId/edit` | Edição (envia `version`); num sprint ativo a data de início é só de leitura |
 | `/projects/:projectId/sprints/:sprintId/close` | Fecho: resumo concluídas/por concluir, destino (backlog ou sprint planeado) e retrospetiva |
+| `/projects/:projectId/sprints/:sprintId/dashboard` | Dashboard: KPIs, burndown, distribuição por estado, bloqueios e velocidade |
 
 - "Novo sprint" e "Editar" só aparecem com `sprints:manage`, projeto não arquivado e `canEdit`.
 - A validação zod espelha o backend (fim ≥ início, máximo de 60 dias); os erros 409/422 do
@@ -116,6 +117,9 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
   `carryOverSprintId` e a retrospetiva, mostra erros por campo e volta ao detalhe, que num
   sprint fechado mostra "Resultado" (concluídas, do compromisso, transportadas) e a
   retrospetiva.
+- "Ver dashboard" aparece em sprints iniciados. Os gráficos usam Recharts e a página é
+  carregada à parte (`lazy`) para não aumentar o bundle inicial; o relatório recarrega sempre
+  que a página abre. Num sprint planeado a página explica que só fica disponível após o início.
 
 ## Testes
 

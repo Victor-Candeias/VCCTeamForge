@@ -20,3 +20,12 @@ class SprintSnapshotRepository(MongoRepository):
 
     def find_all(self, sprint_id: ObjectId, kind: str) -> list[dict[str, Any]]:
         return list(self.collection.find({"sprintId": sprint_id, "kind": kind}).sort("day", 1))
+
+    def find_totals(self, sprint_id: ObjectId, kinds: list[str]) -> list[dict[str, Any]]:
+        """Só ``kind``, ``day`` e ``totals`` (sem as issues), por dia e ``takenAt``."""
+        return list(
+            self.collection.find(
+                {"sprintId": sprint_id, "kind": {"$in": kinds}},
+                {"kind": 1, "day": 1, "takenAt": 1, "totals": 1},
+            ).sort([("day", 1), ("takenAt", 1)])
+        )

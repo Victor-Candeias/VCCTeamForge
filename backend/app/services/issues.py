@@ -43,6 +43,10 @@ from app.services.authorization import (
 )
 from app.services.common import date_to_datetime, datetime_to_date, object_id_or_422
 from app.services.issue_history import HistoryEvent, IssueActivityRecorder, diff_issue
+from app.services.sprint_snapshots import DailySnapshotRecorder
+
+# Alterações que mudam o burndown de um sprint ativo (snapshot diário, DEV-019).
+BURNDOWN_FIELDS = frozenset({"status", "storyPoints"})
 
 # Campos cujas alterações são reportadas (histórico/auditoria).
 TRACKED_FIELDS = (
@@ -106,6 +110,7 @@ class IssueService:
         self.users = UserRepository(db)
         self.counters = CounterRepository(db)
         self.activity = IssueActivityRecorder(db)
+        self.daily = DailySnapshotRecorder(db)
 
     # Leitura -------------------------------------------------------------------------------
 
@@ -318,6 +323,8 @@ class IssueService:
             audit_action="issue.updated",
             changes=diff,
         )
+        if updated.get("sprintId") and changed & BURNDOWN_FIELDS:
+            self.daily.record(updated["sprintId"], now)
         return updated, diff
 
     def move_rank(self, user: User, issue_id: ObjectId, data: RankMove) -> IssueSummary:

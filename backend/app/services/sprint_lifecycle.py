@@ -85,6 +85,7 @@ class SprintLifecycleService(SprintPlanningService):
         except PyMongoError:
             self._revert_start(updated)
             raise
+        self.daily.record(sprint_id, now, issues)
 
         self._audit(
             "sprint.started",
@@ -138,6 +139,7 @@ class SprintLifecycleService(SprintPlanningService):
         except PyMongoError:
             self._revert_close(updated)
             raise
+        self.daily.record(sprint_id, now, issues)
 
         target_id = target["_id"] if target else None
         for issue in issues:

@@ -16,7 +16,7 @@ status: active
 <!-- maestru:work-items-list -->
 | ID | Title | Status | Created | Owner | Priority | Completed | Template | Blocked By | Spec |
 |---|---|---|---|---|---|---|---|---|---|
-| DEV-015 | Criar e editar sprints | backlog | 2026-10-20 | developer | high |  |  | fase-2-projetos-issues/DEV-009 |  |
+| DEV-015 | Criar e editar sprints | done | 2026-10-20 | developer | high | 2026-10-20 |  | fase-2-projetos-issues/DEV-009 | [DEV-015](../specs/fase-3-scrum/dev-015-spec.md) |
 | DEV-016 | Planeamento e estimativas | backlog | 2026-10-20 | developer | high |  |  | fase-2-projetos-issues/DEV-010, DEV-015 |  |
 | DEV-017 | Início e snapshot do compromisso | backlog | 2026-10-20 | developer | high |  |  | DEV-016 |  |
 | DEV-018 | Fecho e transporte de issues | backlog | 2026-10-20 | developer | high |  |  | DEV-017 |  |

@@ -16,6 +16,8 @@ import { ProjectLayout } from '@/features/projects/ProjectLayout'
 import { ProjectMembers } from '@/features/projects/ProjectMembers'
 import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { ProjectSummaryPage } from '@/features/projects/ProjectSummaryPage'
+import { SprintCreatePage, SprintEditPage } from '@/features/sprints/SprintForm'
+import { SprintsPage } from '@/features/sprints/SprintsPage'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -40,6 +42,9 @@ export const routes: RouteObject[] = [
               { path: 'backlog', element: <BacklogPage /> },
               { path: 'board', element: <BoardPage /> },
               { path: 'issues/new', element: <IssueCreatePage /> },
+              { path: 'sprints', element: <SprintsPage /> },
+              { path: 'sprints/new', element: <SprintCreatePage /> },
+              { path: 'sprints/:sprintId/edit', element: <SprintEditPage /> },
             ],
           },
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },

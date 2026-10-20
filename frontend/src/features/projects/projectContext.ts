@@ -11,7 +11,7 @@ export const projectTabs: Tab[] = [
   { to: 'issues', label: 'Issues' },
   { to: 'backlog', label: 'Backlog' },
   { to: 'board', label: 'Quadro' },
-  { to: 'sprints', label: 'Sprints', disabled: true },
+  { to: 'sprints', label: 'Sprints' },
   { to: 'tests', label: 'Testes', disabled: true },
   { to: 'releases', label: 'Releases', disabled: true },
   { to: 'docs', label: 'Documentação', disabled: true },

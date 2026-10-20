@@ -248,6 +248,25 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   quadro usa `PATCH /api/issues/{id}` (`status` + `version`, transições validadas).
 - A migration `0003_issue_rank` atribui `rank` às issues existentes sem rank (por `number`).
 
+### Sprints
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/sprints?projectId=` | `projects:read` + acesso | Filtros `status` (repetível) e `q`; `sort` `startDate`/`name`/`createdAt` (omissão `-startDate`); paginado |
+| `POST /api/sprints` | `sprints:manage` + acesso | `{projectId, name, goal?, startDate, endDate?}` → 201; auditoria `sprint.created` |
+| `GET /api/sprints/{id}` | `projects:read` + acesso | Inclui `durationDays` e `canEdit` |
+| `PATCH /api/sprints/{id}` | `sprints:manage` + acesso | `{name?, goal?, startDate?, endDate?, version}`; auditoria `sprint.updated` |
+
+- Estados `planned`, `active`, `closed` (iniciar e fechar ficam para o DEV-016). Sprints novos
+  ficam `planned`.
+- Nome único por projeto sem distinção de maiúsculas (`nameKey`) → 409 com `field=name`.
+- `endDate` por omissão = início + `settings.sprintDurationDays` − 1; fim ≥ início e duração
+  máxima de 60 dias (422 com `field=endDate`).
+- Sprints `planned`/`active` do mesmo projeto não se sobrepõem (422 com `field=startDate`).
+- Sprint ativo: a data de início já não muda; sprint fechado e projeto arquivado → só leitura (422).
+- `projectId` inválido ou sem acesso no corpo → 422 (`field=projectId`); `GET /api/sprints`
+  sem `projectId` → 422. A migration `0004_sprint_collections` cria a collection `sprints`.
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash

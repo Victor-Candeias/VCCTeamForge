@@ -52,7 +52,7 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 |------|--------|
 | `/projects` | Lista paginada com pesquisa, filtro de estado e "incluir arquivados" |
 | `/projects/new`, `/projects/:projectId/edit` | Formulário partilhado (react-hook-form + zod); a chave só é editável na criação |
-| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Membros; os restantes aparecem desativados até serem implementados |
+| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Issues, Backlog, Quadro, Sprints, Membros; os restantes aparecem desativados até serem implementados |
 | `/projects/:projectId/members` | Membros; adicionar com pesquisa (`GET /api/users`) e remover (exceto o responsável) |
 
 - As ações de gestão aparecem conforme `usePermission('projects:manage')` e o `canManage`
@@ -91,6 +91,18 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - As mudanças são otimistas: em erro (409/422) a vista reverte, mostra a mensagem e recarrega.
 - O menu e o arrastar só oferecem as transições de `issueTransitions` (espelho do backend);
   a reordenação envia os vizinhos (`afterId`/`beforeId`) calculados por `reorder`.
+
+## Sprints
+
+| Rota | Página |
+|------|--------|
+| `/projects/:projectId/sprints` | Separador "Sprints": lista paginada (estado, datas, duração, objetivo) com filtro de estado |
+| `/projects/:projectId/sprints/new` | Criação; sugere `Sprint N+1`, início no dia seguinte ao fim do último sprint (ou hoje) e fim pela duração do projeto |
+| `/projects/:projectId/sprints/:sprintId/edit` | Edição (envia `version`); num sprint ativo a data de início é só de leitura |
+
+- "Novo sprint" e "Editar" só aparecem com `sprints:manage`, projeto não arquivado e `canEdit`.
+- A validação zod espelha o backend (fim ≥ início, máximo de 60 dias); os erros 409/422 do
+  servidor aparecem no campo indicado em `field`.
 
 ## Auditoria
 

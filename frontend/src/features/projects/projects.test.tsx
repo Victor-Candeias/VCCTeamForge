@@ -135,7 +135,8 @@ describe('detalhe e membros', () => {
 
     expect(await screen.findByRole('heading', { name: 'Aplicação' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Membros' })).toBeInTheDocument()
-    expect(screen.getByText('Sprints')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('link', { name: 'Sprints' })).toBeInTheDocument()
+    expect(screen.getByText('Testes')).toHaveAttribute('aria-disabled', 'true')
     expect(screen.queryByRole('button', { name: 'Arquivar' })).not.toBeInTheDocument()
   })
 

@@ -1,0 +1,70 @@
+from fastapi import APIRouter, Depends, Query, Response, status
+from pymongo.database import Database
+
+from app.api.deps import get_db, parse_object_id, require_permissions
+from app.domain.permissions import Permission
+from app.domain.sprints import SprintStatus
+from app.domain.users import User
+from app.schemas.common import Page, PageParams, parse_sort
+from app.schemas.sprints import SprintCreate, SprintResponse, SprintUpdate
+from app.services.sprints import DEFAULT_SPRINT_SORT, SPRINT_SORT_FIELDS, SprintService
+
+router = APIRouter(prefix="/sprints", tags=["sprints"])
+
+can_read = require_permissions(Permission.PROJECTS_READ)
+can_manage = require_permissions(Permission.SPRINTS_MANAGE)
+
+
+def get_sprint_service(db: Database = Depends(get_db)) -> SprintService:
+    return SprintService(db)
+
+
+@router.get("", response_model=Page[SprintResponse])
+def list_sprints(
+    response: Response,
+    project_id: str = Query(alias="projectId"),
+    status_filter: list[SprintStatus] = Query(default_factory=list, alias="status"),
+    sort: str | None = Query(default=None, max_length=30),
+    page: PageParams = Depends(),
+    user: User = Depends(can_read),
+    service: SprintService = Depends(get_sprint_service),
+) -> Page[SprintResponse]:
+    response.headers["Cache-Control"] = "no-store"
+    items, total = service.search(
+        user,
+        parse_object_id(project_id, "Projeto"),
+        statuses=list(dict.fromkeys(status_filter)),
+        sort=parse_sort(sort, SPRINT_SORT_FIELDS, DEFAULT_SPRINT_SORT),
+        page=page,
+    )
+    return Page[SprintResponse](items=items, total=total, page=page.page, page_size=page.page_size)
+
+
+@router.post("", response_model=SprintResponse, status_code=status.HTTP_201_CREATED)
+def create_sprint(
+    data: SprintCreate,
+    user: User = Depends(can_manage),
+    service: SprintService = Depends(get_sprint_service),
+) -> SprintResponse:
+    return service.create(user, data)
+
+
+@router.get("/{sprint_id}", response_model=SprintResponse)
+def get_sprint(
+    sprint_id: str,
+    response: Response,
+    user: User = Depends(can_read),
+    service: SprintService = Depends(get_sprint_service),
+) -> SprintResponse:
+    response.headers["Cache-Control"] = "no-store"
+    return service.get(user, parse_object_id(sprint_id, "Sprint"))
+
+
+@router.patch("/{sprint_id}", response_model=SprintResponse)
+def update_sprint(
+    sprint_id: str,
+    data: SprintUpdate,
+    user: User = Depends(can_manage),
+    service: SprintService = Depends(get_sprint_service),
+) -> SprintResponse:
+    return service.update(user, parse_object_id(sprint_id, "Sprint"), data)

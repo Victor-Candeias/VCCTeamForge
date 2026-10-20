@@ -26,6 +26,8 @@
     {"collection": "attachments", "name": "attachments_issueId_createdAt", "keys": [["issueId", 1], ["createdAt", 1]]},
 
     {"collection": "sprints", "name": "sprints_projectId_status", "keys": [["projectId", 1], ["status", 1]]},
+    {"collection": "sprints", "name": "sprints_projectId_nameKey_unique", "keys": [["projectId", 1], ["nameKey", 1]], "options": {"unique": true}},
+    {"collection": "sprints", "name": "sprints_projectId_startDate", "keys": [["projectId", 1], ["startDate", -1]]},
 
     {"collection": "test_runs", "name": "test_runs_projectId_executedAt", "keys": [["projectId", 1], ["executedAt", -1]]},
 

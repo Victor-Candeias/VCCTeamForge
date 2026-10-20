@@ -1,0 +1,62 @@
+# VCCTeamForge API — FastAPI/Uvicorn atrás do Nginx (README §8).
+# Instalar em /etc/systemd/system/VCCTeamForge-api.service (deployment/scripts/install.sh).
+
+[Unit]
+Description=VCCTeamForge API (FastAPI/Uvicorn)
+Documentation=file:///opt/VCCTeamForge/deployment/README.md
+After=network-online.target mongodb44.service
+Wants=network-online.target mongodb44.service
+
+[Service]
+Type=exec
+User=vccteamforge
+Group=vccteamforge
+WorkingDirectory=/opt/VCCTeamForge/backend
+# A configuração (com segredos) é lida pela aplicação; ficheiro root:vccteamforge 0640.
+Environment=VCCTF_ENV_FILE=/etc/VCCTeamForge/api.env
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/VCCTeamForge/venv/bin/python -m app
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# Anexos e dados persistentes: /var/lib/VCCTeamForge (criado pelo systemd com o dono certo).
+StateDirectory=VCCTeamForge
+StateDirectoryMode=0750
+UMask=0027
+
+# Limites para uma máquina com pouca RAM (Argon2id usa ~19 MiB por login em curso).
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=128
+
+# Hardening
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

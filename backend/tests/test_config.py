@@ -36,6 +36,13 @@ def test_environment_variables_override_env_file(
     assert settings.mongodb_username is None
 
 
+def test_explicit_env_file_must_exist(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(ENV_FILE_VARIABLE, str(tmp_path / "missing.env"))
+
+    with pytest.raises(FileNotFoundError, match=ENV_FILE_VARIABLE):
+        load_settings()
+
+
 def test_auth_source_defaults_to_database() -> None:
     settings = Settings(mongodb_database="Db", mongodb_username="u", mongodb_password="p")
 

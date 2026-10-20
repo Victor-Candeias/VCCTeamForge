@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Executa o CLI de manutenção (python -m app.cli) como utilizador do serviço,
+# com a configuração de produção. Ex.: vccteamforge-manage status
+set -euo pipefail
+
+APP_ROOT="${VCCTF_APP_ROOT:-/opt/VCCTeamForge}"
+ENV_FILE="${VCCTF_ENV_FILE:-/etc/VCCTeamForge/api.env}"
+SERVICE_USER="${VCCTF_SERVICE_USER:-vccteamforge}"
+
+cd "$APP_ROOT/backend"
+
+run=("$APP_ROOT/venv/bin/python" -m app.cli "$@")
+if [[ "$(id -un)" == "$SERVICE_USER" ]]; then
+    exec env VCCTF_ENV_FILE="$ENV_FILE" PYTHONDONTWRITEBYTECODE=1 \
+        VCCTF_NEW_USER_PASSWORD="${VCCTF_NEW_USER_PASSWORD:-}" "${run[@]}"
+fi
+if [[ "$(id -u)" -ne 0 ]]; then
+    echo "Executar como root ou como $SERVICE_USER." >&2
+    exit 1
+fi
+exec runuser -u "$SERVICE_USER" -- env VCCTF_ENV_FILE="$ENV_FILE" PYTHONDONTWRITEBYTECODE=1 \
+    VCCTF_NEW_USER_PASSWORD="${VCCTF_NEW_USER_PASSWORD:-}" "${run[@]}"

@@ -38,7 +38,7 @@ Documentação OpenAPI: `http://127.0.0.1:5000/api/docs`.
 A configuração é lida por `app/core/config.py` (pydantic-settings) com a seguinte prioridade:
 
 1. variáveis de ambiente do processo;
-2. ficheiro `.env` (por omissão `./.env`; outro caminho via `VCCTF_ENV_FILE`);
+2. ficheiro `.env` (por omissão `./.env`, opcional; outro caminho via `VCCTF_ENV_FILE`, que tem de existir — a API recusa arrancar se não existir);
 3. valores por omissão.
 
 Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais reais no Git.

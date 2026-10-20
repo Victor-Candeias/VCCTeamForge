@@ -313,6 +313,7 @@ VCCTeamForge/
 │   ├── migrations/
 │   └── seed/
 ├── deployment/
+│   ├── env/
 │   ├── nginx/
 │   ├── systemd/
 │   └── scripts/
@@ -344,6 +345,8 @@ Nginx (80/443, endereço LAN)
 - Abrir apenas a porta web à sub-rede autorizada; usar firewall.
 - Preferir HTTPS interno com certificado confiável nos postos.
 - Não pressupor resolução automática de `VCCTeamForge.local`; configurar DNS interno ou IP estático.
+
+Os ficheiros de instalação (unidade systemd, Nginx, scripts de instalação/deploy e exemplo de configuração) e o procedimento completo estão em [`deployment/`](deployment/README.md).
 
 ### Configuração exemplificativa da API
 

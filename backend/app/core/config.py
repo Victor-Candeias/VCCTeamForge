@@ -96,7 +96,14 @@ class Settings(BaseSettings):
 
 def load_settings(env_file: str | os.PathLike[str] | None = None) -> Settings:
     if env_file is None:
-        env_file = os.environ.get(ENV_FILE_VARIABLE, ".env")
+        explicit = os.environ.get(ENV_FILE_VARIABLE)
+        # Um ficheiro indicado explicitamente (ex.: unidade systemd) tem de existir;
+        # caso contrário a API arrancaria em silêncio com a configuração por omissão.
+        if explicit and not Path(explicit).is_file():
+            raise FileNotFoundError(
+                f"{ENV_FILE_VARIABLE} aponta para um ficheiro inexistente: {explicit}"
+            )
+        env_file = explicit or ".env"
     return Settings(_env_file=env_file)  # type: ignore[call-arg]
 
 

@@ -22,6 +22,6 @@ status: active
 | DEV-004 | Implementar acesso MongoDB 4.4 com PyMongo e testes de compatibilidade | done | 2026-10-20 | developer | critical | 2026-10-20 |  | DEV-001, DEV-003 | [DEV-004](../specs/fase-1-fundacao/dev-004-spec.md) |
 | DEV-005 | Criar migrations/seeds e índices idempotentes | done | 2026-10-20 | developer | high | 2026-10-20 |  | DEV-004 | [DEV-005](../specs/fase-1-fundacao/dev-005-spec.md) |
 | DEV-006 | Implementar login/logout, sessão e RBAC | done | 2026-10-20 | developer | critical | 2026-10-20 |  | DEV-004, DEV-005 | [DEV-006](../specs/fase-1-fundacao/dev-006-spec.md) |
-| DEV-007 | Configurar Nginx e serviço systemd | backlog | 2026-10-20 | developer | medium |  |  | DEV-001, DEV-002 |  |
+| DEV-007 | Configurar Nginx e serviço systemd | done | 2026-10-20 | developer | medium | 2026-10-20 |  | DEV-001, DEV-002 | [DEV-007](../specs/fase-1-fundacao/dev-007-spec.md) |
 | DEV-008 | Configurar logging, tratamento de erros e health checks | done | 2026-10-20 | developer | medium | 2026-10-20 |  | DEV-001 | [DEV-008](../specs/fase-1-fundacao/dev-008-spec.md) |
 <!-- /maestru:work-items-list -->

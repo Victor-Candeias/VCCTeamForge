@@ -62,5 +62,18 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - Os componentes `native-select`, `table`, `badge` e `textarea` em `src/components/ui` seguem o
   estilo shadcn; usa-se `<select>` nativo (acessível e testável em jsdom).
 
+## Issues
+
+| Rota | Página |
+|------|--------|
+| `/projects/:projectId/issues` | Separador "Issues": tabela paginada e botão "Nova issue" |
+| `/projects/:projectId/issues/new` | Criação (react-hook-form + zod); QA só vê o tipo Bug |
+| `/issues/:issueKey` | Detalhe: descrição Markdown, critérios, dependências, mudança de estado (só `allowedTransitions`), bloquear/desbloquear com motivo |
+| `/issues/:issueKey/edit` | Edição (o tipo não muda); a lista de pais segue a hierarquia do backend (`canBeParent`) |
+
+- `src/components/Markdown.tsx` usa `react-markdown` sem HTML bruto (`skipHtml`); links abrem
+  em novo separador com `rel="noopener noreferrer"`.
+- Mutações enviam `version`; um 409 mostra o aviso de edição concorrente.
+
 Novos componentes shadcn: `npx shadcn@latest add <componente>` — confirmar que os imports
 usam `@/lib/utils` e que os ficheiros ficam em `src/components/ui`.

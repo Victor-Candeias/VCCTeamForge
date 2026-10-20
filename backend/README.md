@@ -147,6 +147,27 @@ Convenções comuns:
 O responsável (`leadUserId`) tem de ser um utilizador ativo com perfil Tech Lead ou
 Administrador. Projetos arquivados ficam só de leitura e saem das listas por omissão.
 
+### Issues
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/issues?projectId=` | `issues:read` + acesso ao projeto | Paginado; `sort` `number`/`updatedAt` (omissão `-number`) |
+| `POST /api/issues` | `issues:write` | QA só cria `bug`; projeto arquivado → 422 |
+| `GET /api/issues/{id}`, `GET /api/issues/by-key/{key}` | `issues:read` + acesso | Inclui `canEdit`, `allowedTransitions`, pai e dependências |
+| `PATCH /api/issues/{id}` | admin/Tech Lead, ou responsável/autor | Corpo com `version`; `status`, `blocked` + `blockReason` e restantes campos |
+
+- **Numeração:** a chave `PROJ-N` vem de um contador atómico por projeto (`counters`,
+  `issues:<projectId>`); números não são reutilizados.
+- **Transições:** `todo → in_progress`; `in_progress → todo/code_review/testing/done`;
+  `code_review → in_progress/testing/done`; `testing → in_progress/code_review/done`;
+  `done → in_progress` (reabrir). Outras → 422 `field=status`. `completedAt` é preenchido
+  ao entrar em `done` e limpo ao reabrir.
+- **Hierarquia:** epic sem pai; subtask exige pai que não seja epic nem subtask; os restantes
+  tipos só podem ter um epic como pai. Pai e dependências têm de ser do mesmo projeto.
+- **Bloqueio:** `blocked=true` exige `blockReason` (≤ 500); `blockedAt` é gerido pelo servidor.
+- Labels normalizadas (minúsculas, sem duplicados, ≤ 20 × 40 caracteres); story points entre
+  0 e 100 em múltiplos de 0,5; responsável tem de ser membro do projeto.
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash

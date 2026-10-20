@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { z } from 'zod'
 
+import { Field } from '@/components/Field'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -184,26 +184,6 @@ function ProjectFormFields({
         </Button>
       </div>
     </form>
-  )
-}
-
-export function Field({
-  label,
-  htmlFor,
-  error,
-  children,
-}: {
-  label: string
-  htmlFor: string
-  error?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
   )
 }
 

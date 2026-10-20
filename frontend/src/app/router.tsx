@@ -5,6 +5,9 @@ import { NotFoundPage } from '@/app/NotFoundPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { IssueDetailPage } from '@/features/issues/IssueDetailPage'
+import { IssueCreatePage, IssueEditPage } from '@/features/issues/IssueForm'
+import { ProjectIssuesPage } from '@/features/issues/ProjectIssuesPage'
 import { ProjectCreatePage, ProjectEditPage } from '@/features/projects/ProjectForm'
 import { ProjectLayout } from '@/features/projects/ProjectLayout'
 import { ProjectMembers } from '@/features/projects/ProjectMembers'
@@ -30,8 +33,12 @@ export const routes: RouteObject[] = [
             children: [
               { index: true, element: <ProjectSummaryPage /> },
               { path: 'members', element: <ProjectMembers /> },
+              { path: 'issues', element: <ProjectIssuesPage /> },
+              { path: 'issues/new', element: <IssueCreatePage /> },
             ],
           },
+          { path: 'issues/:issueKey', element: <IssueDetailPage /> },
+          { path: 'issues/:issueKey/edit', element: <IssueEditPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

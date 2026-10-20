@@ -32,7 +32,11 @@ export function useProjects(filters: ProjectFilters) {
 }
 
 export function useProject(projectId: string) {
-  return useQuery({ queryKey: projectKeys.detail(projectId), queryFn: () => getProject(projectId) })
+  return useQuery({
+    queryKey: projectKeys.detail(projectId),
+    queryFn: () => getProject(projectId),
+    enabled: Boolean(projectId),
+  })
 }
 
 export function useProjectMembers(projectId: string) {

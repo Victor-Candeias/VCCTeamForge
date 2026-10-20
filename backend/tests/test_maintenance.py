@@ -209,10 +209,11 @@ def _run_cli(*args: str, settings: Settings, client) -> tuple[int, str, str]:
 
 def test_cli_migrate_seed_and_status(db: Database, mongo_settings: Settings, mongo_client):
     total = len(indexes.load_index_specs(DEFAULT_DATABASE_DIR))
+    available = len(migrations.discover_migrations(DEFAULT_DATABASE_DIR))
 
     code, out, _ = _run_cli("migrate", settings=mongo_settings, client=mongo_client)
     assert code == 0
-    assert f"1 migration(s) e {total} índice(s) novos" in out
+    assert f"{available} migration(s) e {total} índice(s) novos" in out
 
     code, out, _ = _run_cli("migrate", settings=mongo_settings, client=mongo_client)
     assert "0 migration(s) e 0 índice(s) novos" in out
@@ -223,6 +224,7 @@ def test_cli_migrate_seed_and_status(db: Database, mongo_settings: Settings, mon
 
     code, out, _ = _run_cli("status", settings=mongo_settings, client=mongo_client)
     assert "0001_initial_collections: aplicada" in out
+    assert "0002_issue_collections: aplicada" in out
     assert f"Índices: {total}/{total} presentes" in out
 
 

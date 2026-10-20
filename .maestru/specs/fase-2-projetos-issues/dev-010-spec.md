@@ -67,7 +67,7 @@ Criar, consultar e editar issues de um projeto (README §4.3, §5.3, §5.6 e §6
 | Create | `database/migrations/0002_issue_collections.py` | Cria `issues`, `issue_comments`, `issue_history`, `attachments` (idempotente) |
 | Modify | `database/indexes/indexes.json` | `issues_key_unique`, `issues_parentIssueId` |
 
-- [ ] `VCCTF_REQUIRE_MONGO=1 .venv/bin/pytest` e `ruff` passam
+- [x] `VCCTF_REQUIRE_MONGO=1 .venv/bin/pytest` e `ruff` passam
 
 ### Phase 3: Frontend
 
@@ -83,7 +83,7 @@ Criar, consultar e editar issues de um projeto (README §4.3, §5.3, §5.6 e §6
 | Modify | `frontend/src/app/router.tsx` | `/projects/:projectId/issues`, `/projects/:projectId/issues/new`, `/issues/:issueKey`, `/issues/:issueKey/edit` |
 | Create | `frontend/src/features/issues/issues.test.tsx` | Criação, validação, transições disponíveis, bloqueio, 409 |
 
-- [ ] `npm run typecheck && npm run lint && npm test` passam
+- [x] `npm run typecheck && npm run lint && npm test` passam
 
 ### Phase 4: Documentação
 

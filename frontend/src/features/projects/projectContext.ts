@@ -8,7 +8,7 @@ type Tab = { to: string; label: string; end?: boolean; disabled?: boolean }
 export const projectTabs: Tab[] = [
   { to: '', label: 'Resumo', end: true },
   { to: 'members', label: 'Membros' },
-  { to: 'issues', label: 'Issues', disabled: true },
+  { to: 'issues', label: 'Issues' },
   { to: 'backlog', label: 'Backlog', disabled: true },
   { to: 'board', label: 'Quadro', disabled: true },
   { to: 'sprints', label: 'Sprints', disabled: true },

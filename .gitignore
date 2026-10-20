@@ -1,2 +1,129 @@
-# Google App Engine generated folder
-appengine-generated/
+# ============================================
+# VCCTeamForge - Git Ignore
+# ============================================
+
+# --------------------------------------------
+# .NET / Visual Studio
+# --------------------------------------------
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+TestResults/
+*.coverage
+*.coveragexml
+coverage/
+
+# --------------------------------------------
+# VS Code / Rider
+# --------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.sln.iml
+
+# --------------------------------------------
+# React / Node.js / Vite
+# --------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+.next/
+.nuxt/
+.cache/
+.vite/
+*.tsbuildinfo
+
+# --------------------------------------------
+# Logs
+# --------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --------------------------------------------
+# Environment / Secrets
+# --------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
+secrets.json
+
+*.pfx
+*.p12
+*.pem
+*.key
+
+# --------------------------------------------
+# MongoDB
+# --------------------------------------------
+dump/
+mongodb-backup/
+mongo-backup/
+*.bson
+*.metadata.json
+
+# --------------------------------------------
+# Uploads / Attachments
+# --------------------------------------------
+uploads/
+attachments/
+storage/
+
+# --------------------------------------------
+# Reports / Exports
+# --------------------------------------------
+exports/
+generated-reports/
+reports-output/
+
+# --------------------------------------------
+# Temporary Files
+# --------------------------------------------
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# --------------------------------------------
+# Operating Systems
+# --------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --------------------------------------------
+# Linux
+# --------------------------------------------
+*.pid
+*.pid.lock
+core
+core.*
+
+# --------------------------------------------
+# Python (utility scripts)
+# --------------------------------------------
+__pycache__/
+*.pyc
+.venv/
+
+# --------------------------------------------
+# Package Manager
+# --------------------------------------------
+# Keep package-lock.json / yarn.lock /
+# pnpm-lock.yaml tracked for reproducible builds.

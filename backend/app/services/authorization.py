@@ -7,7 +7,8 @@ o acesso negado é reportado como 404.
 from collections.abc import Mapping
 from typing import Any
 
-from app.core.errors import NotFoundError
+from app.core.errors import ForbiddenError, NotFoundError
+from app.domain.projects import can_manage_project
 from app.domain.users import User
 
 
@@ -28,3 +29,11 @@ def accessible_projects_filter(user: User) -> dict[str, Any]:
     if user.is_admin:
         return {}
     return {"$or": [{"memberIds": user.id}, {"leadUserId": user.id}]}
+
+
+def ensure_project_manager(user: User, project: Mapping[str, Any] | None) -> Mapping[str, Any]:
+    """Acesso de gestão: administrador ou responsável do projeto (403 se for apenas membro)."""
+    project = ensure_project_access(user, project)
+    if not can_manage_project(user, project):
+        raise ForbiddenError("Apenas o responsável do projeto ou um administrador pode alterá-lo")
+    return project

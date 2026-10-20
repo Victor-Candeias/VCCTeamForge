@@ -1,12 +1,39 @@
+export type FieldError = { loc: (string | number)[]; msg: string; type?: string }
+
+/** Campos adicionais de `application/problem+json` (ex.: `field`, `currentVersion`, `errors`). */
+export type ProblemExtensions = {
+  field?: string
+  currentVersion?: number
+  errors?: FieldError[]
+  [key: string]: unknown
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly detail?: string
+  readonly extensions: ProblemExtensions
 
-  constructor(status: number, title: string, detail?: string) {
+  constructor(status: number, title: string, detail?: string, extensions: ProblemExtensions = {}) {
     super(detail ?? title)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail
+    this.extensions = extensions
+  }
+
+  get isConflict() {
+    return this.status === 409
+  }
+
+  /** Mensagens de validação indexadas pelo nome do campo (último elemento de `loc`). */
+  fieldErrors(): Record<string, string> {
+    const result: Record<string, string> = {}
+    if (this.extensions.field) result[this.extensions.field] = this.message
+    for (const error of this.extensions.errors ?? []) {
+      const name = error.loc.at(-1)
+      if (typeof name === 'string') result[name] = error.msg
+    }
+    return result
   }
 }
 
@@ -31,7 +58,8 @@ async function ensureCsrfToken(): Promise<string> {
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
-  if (init.body !== undefined && !headers.has('Content-Type')) {
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
+  if (init.body !== undefined && !isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
   const method = (init.method ?? 'GET').toUpperCase()
@@ -57,9 +85,27 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
 async function toApiError(response: Response): Promise<ApiError> {
   try {
-    const body = (await response.json()) as { title?: string; detail?: string }
-    return new ApiError(response.status, body.title ?? response.statusText, body.detail)
+    const { title, detail, ...extensions } = (await response.json()) as {
+      title?: string
+      detail?: string
+    } & ProblemExtensions
+    return new ApiError(response.status, title ?? response.statusText, detail, extensions)
   } catch {
     return new ApiError(response.status, response.statusText || 'Erro de comunicação')
   }
+}
+
+/** Constrói uma query string ignorando valores vazios; arrays repetem a chave. */
+export function toQueryString(params: Record<string, unknown>): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '' || value === false) continue
+    if (Array.isArray(value)) {
+      for (const item of value) search.append(key, String(item))
+    } else {
+      search.set(key, String(value))
+    }
+  }
+  const query = search.toString()
+  return query ? `?${query}` : ''
 }

@@ -5,7 +5,10 @@ import { useCurrentUser, useLogout } from '@/features/auth/useAuth'
 import { cn } from '@/lib/utils'
 import { roleLabels } from '@/services/auth'
 
-const navigation = [{ to: '/', label: 'Dashboard', end: true }]
+const navigation = [
+  { to: '/', label: 'Dashboard', end: true },
+  { to: '/projects', label: 'Projetos', end: false },
+]
 
 export function AppLayout() {
   const { data: user } = useCurrentUser()

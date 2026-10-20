@@ -108,14 +108,44 @@ Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais Mo
 - **Rate limiting:** as falhas de login por email e por IP ficam em `login_attempts` (TTL 24h).
   Acima do limite a API devolve 429 com `Retry-After`. Credenciais erradas e utilizador
   inexistente dão a mesma resposta, e o tempo de resposta também é igual.
-- **Auditoria** (`audit_logs`): `auth.login`, `auth.login_failed`, `auth.logout` e `user.created`,
-  com IP e request id.
+- **Auditoria** (`audit_logs`): `auth.login`, `auth.login_failed`, `auth.logout`, `user.created`
+  e `project.*` (created, updated, archived, restored, member_added, member_removed), com IP e
+  request id.
 - **RBAC:** os perfis `admin`, `tech_lead`, `developer` e `qa` são mapeados para permissões em
   `app/domain/permissions.py`. Nas rotas usa-se `Depends(require_permissions(Permission.X))`.
   Para dados de um projeto, os serviços usam `app/services/authorization.py`: só administradores
   ou membros/lead têm acesso, e os restantes recebem 404.
 - **Endpoints:** `GET /api/auth/csrf`, `POST /api/auth/login`, `POST /api/auth/logout` e
   `GET /api/users/me`.
+
+## API de domínio
+
+Convenções comuns:
+
+- Listas paginadas devolvem `{items, total, page, pageSize}` (`page` ≥ 1, `pageSize` ≤ 100) e
+  aceitam `sort=campo` ou `sort=-campo` (desempate estável por `_id`; campo inválido → 422).
+- Documentos editáveis têm `version`: as mutações enviam a versão lida e recebem 409 com
+  `currentVersion` se outra pessoa alterou entretanto.
+- Erros de regra de negócio devolvem 422 com `field` quando se referem a um campo; IDs
+  malformados em rotas dão 404.
+- Mutações relevantes ficam em `audit_logs` (ação, entidade, utilizador, detalhes).
+
+### Projetos
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/projects` | `projects:read` | Só projetos acessíveis; filtros `status` (repetível), `includeArchived`, `q`; `sort` `name`/`key`/`updatedAt` |
+| `POST /api/projects` | `projects:manage` | `key` única (`^[A-Z][A-Z0-9]{1,9}$`); um Tech Lead fica responsável e membro |
+| `GET /api/projects/{id}` | membro/lead/admin | Inclui `canManage` e `memberCount` |
+| `PATCH /api/projects/{id}` | admin ou lead do projeto | `key` e membros não são editáveis aqui; arquivado → 422 |
+| `POST /api/projects/{id}/archive`, `/restore` | admin ou lead | Corpo `{version}` |
+| `GET /api/projects/{id}/members` | membro/lead/admin | Responsável primeiro |
+| `POST /api/projects/{id}/members` | admin ou lead | `{userId, version}`; utilizador ativo |
+| `DELETE /api/projects/{id}/members/{userId}?version=` | admin ou lead | O responsável não pode ser removido |
+| `GET /api/users?q=&limit=` | `projects:manage` ou `users:manage` | Utilizadores ativos (máx. 20) para seletores |
+
+O responsável (`leadUserId`) tem de ser um utilizador ativo com perfil Tech Lead ou
+Administrador. Projetos arquivados ficam só de leitura e saem das listas por omissão.
 
 Primeiro administrador (a password é pedida no terminal):
 

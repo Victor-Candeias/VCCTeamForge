@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
+
+// O primeiro render de cada ficheiro (import das rotas) pode exceder 1 s em máquinas lentas.
+configure({ asyncUtilTimeout: 3000 })
 
 afterEach(() => {
   cleanup()

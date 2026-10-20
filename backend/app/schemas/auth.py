@@ -31,3 +31,19 @@ class CurrentUserResponse(ApiModel):
             role=user.role,
             permissions=sorted(user.permissions),
         )
+
+
+class UserSummary(ApiModel):
+    id: str
+    name: str
+    email: str
+    role: Role
+
+    @classmethod
+    def from_document(cls, document: dict) -> "UserSummary":
+        return cls(
+            id=str(document["_id"]),
+            name=document["name"],
+            email=document["email"],
+            role=Role(document["role"]),
+        )

@@ -47,3 +47,45 @@ export const testUser = {
   role: 'developer' as const,
   permissions: ['issues:read'],
 }
+
+export const techLeadUser = {
+  id: 'tl1',
+  email: 'tiago@exemplo.pt',
+  name: 'Tiago',
+  role: 'tech_lead' as const,
+  permissions: ['projects:read', 'projects:manage', 'issues:read', 'issues:write', 'issues:comment'],
+}
+
+export function testProject(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'p1',
+    key: 'APP',
+    name: 'Aplicação',
+    description: 'Projeto de teste',
+    status: 'active',
+    priority: 'medium',
+    lead: { id: 'tl1', name: 'Tiago', email: 'tiago@exemplo.pt', role: 'tech_lead' },
+    startDate: '2026-01-05',
+    targetDate: null,
+    memberCount: 2,
+    settings: { methodology: 'scrum', sprintDurationDays: 14, estimationType: 'story_points' },
+    createdAt: '2026-01-01T10:00:00Z',
+    updatedAt: '2026-01-02T10:00:00Z',
+    archivedAt: null,
+    version: 3,
+    canManage: true,
+    ...overrides,
+  }
+}
+
+export function pageOf<T>(items: T[], page = 1, pageSize = 25) {
+  return { items, total: items.length, page, pageSize }
+}
+
+/** Handler que simula a obtenção do token CSRF (necessário em POST/PATCH/DELETE). */
+export const csrfHandler = {
+  'GET /api/auth/csrf': () => {
+    document.cookie = 'vcctf_csrf=token-csrf; path=/'
+    return jsonResponse({ csrfToken: 'token-csrf' })
+  },
+}

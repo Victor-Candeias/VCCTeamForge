@@ -15,8 +15,8 @@ src/
 ├── app/          # providers, router, layout
 ├── components/   # componentes partilhados (ui/ = shadcn)
 ├── features/     # auth, dashboard, projects, issues, sprints, testing, releases, reports
-├── hooks/
-├── lib/          # utilitários (cn)
+├── hooks/        # usePermission
+├── lib/          # utilitários (cn, mensagens de erro)
 ├── services/     # cliente HTTP da API (/api)
 └── test/         # setup e utilitários de teste
 ```
@@ -45,6 +45,22 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - `apiFetch` envia `X-CSRF-Token` (lido do cookie `vcctf_csrf`) em todos os métodos não seguros
   e obtém o token em `/api/auth/csrf` quando ainda não existe.
 - Qualquer 401 limpa o utilizador em cache, e o `RequireAuth` redireciona para o login.
+
+## Projetos
+
+| Rota | Página |
+|------|--------|
+| `/projects` | Lista paginada com pesquisa, filtro de estado e "incluir arquivados" |
+| `/projects/new`, `/projects/:projectId/edit` | Formulário partilhado (react-hook-form + zod); a chave só é editável na criação |
+| `/projects/:projectId` | Layout com cabeçalho (editar, arquivar/restaurar) e separadores: Resumo, Membros; os restantes aparecem desativados até serem implementados |
+| `/projects/:projectId/members` | Membros; adicionar com pesquisa (`GET /api/users`) e remover (exceto o responsável) |
+
+- As ações de gestão aparecem conforme `usePermission('projects:manage')` e o `canManage`
+  devolvido pela API; a autorização é sempre validada no backend.
+- `ApiError` expõe as extensões problem+json (`field`, `errors`, `currentVersion`):
+  `fieldErrors()` mapeia erros por campo e um 409 mostra o aviso de edição concorrente.
+- Os componentes `native-select`, `table`, `badge` e `textarea` em `src/components/ui` seguem o
+  estilo shadcn; usa-se `<select>` nativo (acessível e testável em jsdom).
 
 Novos componentes shadcn: `npx shadcn@latest add <componente>` — confirmar que os imports
 usam `@/lib/utils` e que os ficheiros ficam em `src/components/ui`.

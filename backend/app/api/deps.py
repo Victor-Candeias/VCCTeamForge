@@ -1,10 +1,12 @@
 from collections.abc import Callable
 
+from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import Depends, Request
 from pymongo.database import Database
 
 from app.core.config import Settings
-from app.core.errors import ForbiddenError, UnauthorizedError
+from app.core.errors import ForbiddenError, NotFoundError, UnauthorizedError
 from app.core.security import hash_token, tokens_equal
 from app.domain.permissions import Permission
 from app.domain.users import User
@@ -70,6 +72,25 @@ def require_permissions(*permissions: Permission) -> Callable[..., User]:
         return user
 
     return dependency
+
+
+def require_any_permission(*permissions: Permission) -> Callable[..., User]:
+    """Dependência que exige sessão válida e pelo menos uma das permissões indicadas."""
+
+    def dependency(user: User = Depends(get_current_user)) -> User:
+        if not any(user.has_permissions(permission) for permission in permissions):
+            raise ForbiddenError("Não tem permissão para esta operação")
+        return user
+
+    return dependency
+
+
+def parse_object_id(value: str, resource: str = "Recurso") -> ObjectId:
+    """IDs em caminhos de URL: um ID mal formado é tratado como inexistente (404)."""
+    try:
+        return ObjectId(value)
+    except (InvalidId, TypeError) as error:
+        raise NotFoundError(f"{resource} não encontrado") from error
 
 
 def verify_csrf(request: Request, settings: Settings = Depends(get_app_settings)) -> None:

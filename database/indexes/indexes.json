@@ -5,6 +5,8 @@
 
     {"collection": "projects", "name": "projects_key_unique", "keys": [["key", 1]], "options": {"unique": true}},
     {"collection": "projects", "name": "projects_memberIds", "keys": [["memberIds", 1]]},
+    {"collection": "projects", "name": "projects_leadUserId", "keys": [["leadUserId", 1]]},
+    {"collection": "projects", "name": "projects_status_name", "keys": [["status", 1], ["name", 1]]},
 
     {"collection": "issues", "name": "issues_projectId_number_unique", "keys": [["projectId", 1], ["number", 1]], "options": {"unique": true}},
     {"collection": "issues", "name": "issues_projectId_status", "keys": [["projectId", 1], ["status", 1]]},

@@ -70,7 +70,7 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 | Create | `backend/app/schemas/common.py` | `Page[T]` genérico (`items`, `total`, `page`, `pageSize`) reutilizável no DEV-011 |
 | Modify | `backend/app/schemas/auth.py` | `UserSummary` (`id`, `name`, `email`, `role`) |
 
-- [ ] Testes escritos e a falhar pelos motivos esperados
+- [x] Testes escritos e a falhar pelos motivos esperados
 
 ### Phase 2: Persistência e serviço
 
@@ -82,8 +82,8 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 | Modify | `backend/app/services/authorization.py` | `ensure_project_manager(user, project)` reutilizável pelos módulos seguintes |
 | Modify | `database/indexes/indexes.json` | `projects_leadUserId` (`leadUserId: 1`) e `projects_status_name` (`status: 1, name: 1`) para listagem |
 
-- [ ] `pytest tests/test_project_domain.py` passa
-- [ ] `python -m app.cli migrate` cria os novos índices e é idempotente
+- [x] `pytest tests/test_project_domain.py` passa
+- [x] `python -m app.cli migrate` cria os novos índices e é idempotente
 
 ### Phase 3: API
 
@@ -94,9 +94,9 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 | Modify | `backend/app/api/deps.py` | `parse_object_id` e `require_any_permission(*perms)` |
 | Modify | `backend/app/api/router.py` | Incluir `projects.router` |
 
-- [ ] `.venv/bin/pytest` (com `VCCTF_REQUIRE_MONGO=1` contra MongoDB 4.4) passa
-- [ ] `.venv/bin/ruff check . && .venv/bin/ruff format --check .` passa
-- [ ] Fluxo csrf → login → criar projeto → adicionar membro → login do membro → ver projeto verificado com curl
+- [x] `.venv/bin/pytest` (com `VCCTF_REQUIRE_MONGO=1` contra MongoDB 4.4) passa
+- [x] `.venv/bin/ruff check . && .venv/bin/ruff format --check .` passa
+- [ ] Fluxo csrf → login → criar projeto → adicionar membro → login do membro → ver projeto verificado com curl (coberto pelos testes de integração `test_projects.py`; verificação com curl pendente)
 
 ### Phase 4: Frontend
 
@@ -123,8 +123,8 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 | Modify | `frontend/src/app/layout/AppLayout.tsx` | Entrada "Projetos" na navegação |
 | Modify | `frontend/src/services/apiClient.ts` | Expor `status` 409/422 e `errors` do problem+json para mostrar mensagens por campo |
 
-- [ ] `npm run typecheck && npm run lint && npm test` passam
-- [ ] Verificação manual: Tech Lead cria projeto, adiciona Developer; Developer vê só esse projeto e não tem ações de edição
+- [x] `npm run typecheck && npm run lint && npm test` passam
+- [ ] Verificação manual: Tech Lead cria projeto, adiciona Developer; Developer vê só esse projeto e não tem ações de edição (coberto pelos testes de UI; verificação manual pendente)
 
 ### Phase 5: Documentação e fecho
 
@@ -134,7 +134,7 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 | Modify | `frontend/README.md` | Páginas de projetos |
 | Run | `maestru check` | Validar `.maestru/` e marcar DEV-009 como `done` |
 
-- [ ] Critérios MVP "Criar, editar e arquivar projetos" e "Associar utilizadores a projetos" cumpridos
+- [x] Critérios MVP "Criar, editar e arquivar projetos" e "Associar utilizadores a projetos" cumpridos
 
 ## Impacted Files
 

@@ -1,13 +1,15 @@
 import { screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { routes } from '@/app/router'
-import { jsonResponse, renderRoutes } from '@/test/utils'
+import { jsonResponse, mockApi, renderRoutes, testUser } from '@/test/utils'
 
 describe('DashboardPage', () => {
   it('mostra o estado da API', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: 'ok', version: '0.1.0' }))
-    vi.stubGlobal('fetch', fetchMock)
+    const fetchMock = mockApi({
+      'GET /api/users/me': () => jsonResponse(testUser),
+      'GET /api/health': () => jsonResponse({ status: 'ok', version: '0.1.0' }),
+    })
 
     renderRoutes(routes)
 
@@ -16,7 +18,10 @@ describe('DashboardPage', () => {
   })
 
   it('indica quando a API está indisponível', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ title: 'Erro' }, 503)))
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(testUser),
+      'GET /api/health': () => jsonResponse({ title: 'Erro' }, 503),
+    })
 
     renderRoutes(routes)
 

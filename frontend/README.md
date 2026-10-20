@@ -14,7 +14,7 @@ React Hook Form + Zod, Vitest + Testing Library.
 src/
 ├── app/          # providers, router, layout
 ├── components/   # componentes partilhados (ui/ = shadcn)
-├── features/     # dashboard, projects, issues, sprints, testing, releases, reports
+├── features/     # auth, dashboard, projects, issues, sprints, testing, releases, reports
 ├── hooks/
 ├── lib/          # utilitários (cn)
 ├── services/     # cliente HTTP da API (/api)
@@ -35,6 +35,16 @@ npm run build      # gera dist/ para o Nginx
 ```
 
 O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
+
+## Autenticação
+
+- As rotas protegidas ficam dentro de `RequireAuth`. Sem sessão, o utilizador é enviado para
+  `/login?next=<destino>`; só são aceites destinos internos.
+- A sessão é um cookie `HttpOnly` gerido pelo backend; o frontend não guarda tokens.
+  `useCurrentUser()` (query `['auth', 'me']`) devolve o utilizador ou `null`.
+- `apiFetch` envia `X-CSRF-Token` (lido do cookie `vcctf_csrf`) em todos os métodos não seguros
+  e obtém o token em `/api/auth/csrf` quando ainda não existe.
+- Qualquer 401 limpa o utilizador em cache, e o `RequireAuth` redireciona para o login.
 
 Novos componentes shadcn: `npx shadcn@latest add <componente>` — confirmar que os imports
 usam `@/lib/utils` e que os ficheiros ficam em `src/components/ui`.

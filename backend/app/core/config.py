@@ -55,10 +55,23 @@ class Settings(BaseSettings):
 
     health_min_free_disk_mb: int = Field(default=1024, ge=0)
 
+    session_cookie_name: str = "vcctf_session"
+    csrf_cookie_name: str = "vcctf_csrf"
+    # None: Secure apenas em produção. Definir false só se produção servir HTTP sem TLS.
+    cookie_secure: bool | None = None
+    cookie_samesite: Literal["lax", "strict"] = "lax"
+    session_idle_minutes: int = Field(default=120, ge=5, le=24 * 60)
+    session_absolute_hours: int = Field(default=12, ge=1, le=24 * 30)
+    login_max_failures_per_email: int = Field(default=5, ge=1)
+    login_max_failures_per_ip: int = Field(default=20, ge=1)
+    login_window_minutes: int = Field(default=15, ge=1, le=24 * 60)
+
     @model_validator(mode="after")
     def _apply_environment_rules(self) -> "Settings":
         if self.api_docs_enabled is None:
             self.api_docs_enabled = self.app_env != "production"
+        if self.cookie_secure is None:
+            self.cookie_secure = self.is_production
         if self.mongodb_username and not self.mongodb_auth_source:
             self.mongodb_auth_source = self.mongodb_database
         if bool(self.mongodb_username) != bool(self.mongodb_password):

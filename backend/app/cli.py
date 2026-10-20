@@ -5,11 +5,17 @@ Uso (a partir de ``backend/``)::
     python -m app.cli status            # migrations aplicadas/pendentes e índices em falta
     python -m app.cli migrate [--dry-run]
     python -m app.cli seed
+    python -m app.cli create-user --email admin@exemplo.pt --name "Admin" [--role admin]
+
+A password do ``create-user`` é pedida no terminal ou lida de ``VCCTF_NEW_USER_PASSWORD``
+(nunca como argumento, para não ficar no histórico da shell).
 
 Lê a mesma configuração que a API (variáveis de ambiente / ``VCCTF_ENV_FILE``).
 """
 
 import argparse
+import getpass
+import os
 import sys
 from collections.abc import Sequence
 from typing import TextIO
@@ -19,8 +25,13 @@ from pymongo.database import Database
 from pymongo.errors import PyMongoError
 
 from app.core.config import Settings, get_settings
+from app.domain.permissions import Role
 from app.maintenance import indexes, migrations, seeds
 from app.repositories import mongo
+from app.repositories.users import EmailAlreadyExistsError
+from app.services.users import UserService
+
+PASSWORD_ENV = "VCCTF_NEW_USER_PASSWORD"  # noqa: S105 (nome da variável, não o segredo)
 
 
 class _Output:
@@ -90,6 +101,33 @@ def _seed(db: Database, settings: Settings, out: _Output) -> int:
     return 0
 
 
+def _read_password() -> str:
+    password = os.environ.get(PASSWORD_ENV)
+    if password:
+        return password
+    if not sys.stdin.isatty():
+        raise ValueError(f"Defina {PASSWORD_ENV} ou execute num terminal interativo")
+    password = getpass.getpass("Password: ")
+    if password != getpass.getpass("Repetir password: "):
+        raise ValueError("As passwords não coincidem")
+    return password
+
+
+def _create_user(db: Database, args: argparse.Namespace, out: _Output) -> int:
+    try:
+        user = UserService(db).create_user(
+            email=args.email,
+            name=args.name,
+            role=Role(args.role),
+            password=_read_password(),
+            source="cli",
+        )
+    except EmailAlreadyExistsError:
+        raise ValueError(f"Já existe um utilizador com o email {args.email}") from None
+    out(f"Utilizador criado: {user.email} ({user.role.value}, id {user.id})")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -97,6 +135,10 @@ def build_parser() -> argparse.ArgumentParser:
     migrate = commands.add_parser("migrate", help="Aplica migrations pendentes e índices")
     migrate.add_argument("--dry-run", action="store_true", help="Mostra o que seria aplicado")
     commands.add_parser("seed", help="Insere dados iniciais em falta")
+    create_user = commands.add_parser("create-user", help="Cria um utilizador ativo")
+    create_user.add_argument("--email", required=True)
+    create_user.add_argument("--name", required=True)
+    create_user.add_argument("--role", choices=[role.value for role in Role], default="admin")
     return parser
 
 
@@ -122,6 +164,8 @@ def main(
             return _status(db, settings, out)
         if args.command == "migrate":
             return _migrate(db, settings, out, dry_run=args.dry_run)
+        if args.command == "create-user":
+            return _create_user(db, args, out)
         return _seed(db, settings, out)
     except (
         migrations.MigrationError,

@@ -62,6 +62,13 @@ Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais rea
 | `LOG_FORMAT` | `text` | `json` recomendado em produção |
 | `LOG_FILE` | — | Se definido, ficheiro com rotação (`LOG_MAX_BYTES`, `LOG_BACKUP_COUNT`) |
 | `HEALTH_MIN_FREE_DISK_MB` | `1024` | Limiar de disco para readiness `degraded` |
+| `COOKIE_SECURE` | `true` só em produção | `false` apenas se produção servir HTTP sem TLS |
+| `COOKIE_SAMESITE` | `lax` | `lax` ou `strict` |
+| `SESSION_IDLE_MINUTES` | `120` | Expiração por inatividade |
+| `SESSION_ABSOLUTE_HOURS` | `12` | Duração máxima da sessão |
+| `LOGIN_MAX_FAILURES_PER_EMAIL` | `5` | Falhas por email na janela |
+| `LOGIN_MAX_FAILURES_PER_IP` | `20` | Falhas por IP na janela |
+| `LOGIN_WINDOW_MINUTES` | `15` | Janela do rate limiting |
 
 Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais MongoDB ou se
 `ATTACHMENTS_PATH` for relativo.
@@ -87,6 +94,35 @@ Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais Mo
 | `GET /api/health`, `GET /api/health/live` | Processo vivo | Sempre 200 |
 | `GET /api/health/ready` | Dependências | 200 `ok`/`degraded`; 503 se o MongoDB falhar |
 
+## Autenticação e autorização
+
+- **Passwords:** Argon2id (19 MiB, t=2, p=1). Os hashes são atualizados no login se os parâmetros
+  mudarem. A password tem entre 12 e 128 caracteres.
+- **Sessões no servidor** (`sessions`): o cookie `vcctf_session` (`HttpOnly`, `SameSite`,
+  `Secure` em produção) contém um token aleatório; a BD guarda apenas o SHA-256 desse token. A
+  sessão expira por inatividade e tem uma duração máxima; um índice TTL remove-a depois.
+  Desativar um utilizador invalida as suas sessões no pedido seguinte.
+- **CSRF:** os métodos não seguros exigem o cabeçalho `X-CSRF-Token` igual ao cookie
+  `vcctf_csrf`. Com sessão, o token tem também de coincidir com o que está associado a ela no
+  servidor. Antes do login, o frontend obtém o token em `GET /api/auth/csrf`.
+- **Rate limiting:** as falhas de login por email e por IP ficam em `login_attempts` (TTL 24h).
+  Acima do limite a API devolve 429 com `Retry-After`. Credenciais erradas e utilizador
+  inexistente dão a mesma resposta, e o tempo de resposta também é igual.
+- **Auditoria** (`audit_logs`): `auth.login`, `auth.login_failed`, `auth.logout` e `user.created`,
+  com IP e request id.
+- **RBAC:** os perfis `admin`, `tech_lead`, `developer` e `qa` são mapeados para permissões em
+  `app/domain/permissions.py`. Nas rotas usa-se `Depends(require_permissions(Permission.X))`.
+  Para dados de um projeto, os serviços usam `app/services/authorization.py`: só administradores
+  ou membros/lead têm acesso, e os restantes recebem 404.
+- **Endpoints:** `GET /api/auth/csrf`, `POST /api/auth/login`, `POST /api/auth/logout` e
+  `GET /api/users/me`.
+
+Primeiro administrador (a password é pedida no terminal):
+
+```bash
+.venv/bin/python -m app.cli create-user --email admin@exemplo.pt --name "Administrador"
+```
+
 ## Migrations, índices e seeds
 
 Executam-se pela CLI, nunca no arranque da API nem por pedido HTTP. Usam a mesma configuração
@@ -97,6 +133,7 @@ que a API. O utilizador MongoDB precisa de `readWrite` na base de dados.
 .venv/bin/python -m app.cli migrate --dry-run  # o que seria aplicado
 .venv/bin/python -m app.cli migrate            # migrations pendentes + índices
 .venv/bin/python -m app.cli seed               # dados iniciais em falta
+.venv/bin/python -m app.cli create-user --email ... --name ... [--role admin|tech_lead|developer|qa]
 ```
 
 - **Migrations** (`database/migrations/NNNN_nome.py`, com `up(db)` e `DESCRIPTION` opcional):

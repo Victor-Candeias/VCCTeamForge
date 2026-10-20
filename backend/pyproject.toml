@@ -15,6 +15,7 @@ dependencies = [
     # PyMongo 4.18+ exige MongoDB >= 4.4; versões futuras podem deixar de suportar 4.4.
     # Só subir após correr tests/test_mongo_compat.py contra o servidor real.
     "pymongo>=4.19,<4.20",
+    "argon2-cffi>=25.1,<26",
 ]
 
 [project.optional-dependencies]

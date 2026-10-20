@@ -1,10 +1,16 @@
 import { NavLink, Outlet } from 'react-router'
 
+import { Button } from '@/components/ui/button'
+import { useCurrentUser, useLogout } from '@/features/auth/useAuth'
 import { cn } from '@/lib/utils'
+import { roleLabels } from '@/services/auth'
 
 const navigation = [{ to: '/', label: 'Dashboard', end: true }]
 
 export function AppLayout() {
+  const { data: user } = useCurrentUser()
+  const logout = useLogout()
+
   return (
     <div className="min-h-svh bg-background text-foreground">
       <header className="border-b">
@@ -24,6 +30,22 @@ export function AppLayout() {
               </NavLink>
             ))}
           </nav>
+          {user && (
+            <div className="ml-auto flex items-center gap-3 text-sm">
+              <span>
+                {user.name}{' '}
+                <span className="text-muted-foreground">· {roleLabels[user.role]}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                Terminar sessão
+              </Button>
+            </div>
+          )}
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">

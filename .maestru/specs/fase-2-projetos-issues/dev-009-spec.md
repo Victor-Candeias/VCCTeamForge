@@ -64,7 +64,8 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 
 | Action | File | Details |
 |--------|------|---------|
-| Create | `backend/app/domain/projects.py` | `ProjectStatus`, `ProjectPriority`, `normalize_project_key`, `PROJECT_KEY_PATTERN`, `DEFAULT_PROJECT_SETTINGS`, `can_manage_project(user, project)` (admin ou lead com `projects:manage`) |
+| Create | `backend/app/domain/common.py` | `Priority` + `PRIORITY_RANK` (partilhados com issues) |
+| Create | `backend/app/domain/projects.py` | `ProjectStatus`, `normalize_project_key`, `PROJECT_KEY_PATTERN`, `DEFAULT_PROJECT_SETTINGS`, `can_manage_project(user, project)` (admin ou lead com `projects:manage`) |
 | Create | `backend/app/schemas/projects.py` | `ProjectCreate`, `ProjectUpdate` (campos opcionais + `version`, `extra="forbid"` para impedir `key`/`memberIds`), `ProjectResponse`, `ProjectListResponse`, `ProjectListQuery`, `MemberAdd`, `MemberResponse` — todos com `ApiModel` (camelCase) |
 | Create | `backend/app/schemas/common.py` | `Page[T]` genérico (`items`, `total`, `page`, `pageSize`) reutilizável no DEV-011 |
 | Modify | `backend/app/schemas/auth.py` | `UserSummary` (`id`, `name`, `email`, `role`) |
@@ -113,11 +114,12 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 | Create | `frontend/src/features/projects/useProjects.ts` | Hooks TanStack Query com chaves `['projects', …]` e invalidação após mutações |
 | Create | `frontend/src/features/projects/ProjectsPage.tsx` | Tabela paginada (chave, nome, estado, prioridade, responsável, datas), pesquisa, filtro de estado, toggle "incluir arquivados" |
 | Create | `frontend/src/features/projects/ProjectForm.tsx` | react-hook-form + zod partilhado entre criar/editar; `key` só editável na criação |
-| Create | `frontend/src/features/projects/ProjectDetailPage.tsx` | Cabeçalho com ações (editar, arquivar/restaurar), separadores Resumo e Membros ativos; Backlog, Sprints, Testes, Releases, Documentação e Métricas visíveis mas desativados ("disponível em breve") |
+| Create | `frontend/src/features/projects/ProjectLayout.tsx` | Cabeçalho com ações (editar, arquivar/restaurar) e separadores por rota (`NavLink`): Resumo e Membros ativos; Sprints, Testes, Releases, Documentação e Métricas visíveis mas desativados ("disponível em breve"). Issues, Backlog e Quadro são ativados pelos DEV-010/014 |
+| Create | `frontend/src/features/projects/ProjectSummaryPage.tsx` | Separador Resumo (campos, responsável, datas, definições) |
 | Create | `frontend/src/features/projects/ProjectMembers.tsx` | Lista de membros e seletor com pesquisa (`GET /users`) |
 | Create | `frontend/src/hooks/usePermissions.ts` | `hasPermission(user, perm)` a partir de `/users/me` |
-| Create | `frontend/src/components/ui/{select,table,tabs,badge,dialog,textarea}.tsx` | Componentes shadcn necessários (`npx shadcn@latest add …`) |
-| Modify | `frontend/src/app/router.tsx` | Rotas `/projects`, `/projects/new`, `/projects/:projectId`, `/projects/:projectId/edit` |
+| Create | `frontend/src/components/ui/{native-select,table,badge,textarea}.tsx` | Componentes no estilo shadcn; `<select>` nativo em vez de Radix Select (acessível e testável em jsdom) |
+| Modify | `frontend/src/app/router.tsx` | Rotas `/projects`, `/projects/new`, `/projects/:projectId` (layout + filhos `members`), `/projects/:projectId/edit` |
 | Modify | `frontend/src/app/layout/AppLayout.tsx` | Entrada "Projetos" na navegação |
 | Modify | `frontend/src/services/apiClient.ts` | Expor `status` 409/422 e `errors` do problem+json para mostrar mensagens por campo |
 
@@ -140,7 +142,8 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 |------|--------|---------|
 | `backend/tests/test_projects.py` | Create | Testes de integração da API de projetos e membros |
 | `backend/tests/test_project_domain.py` | Create | Testes unitários das regras de domínio |
-| `backend/app/domain/projects.py` | Create | Estados, prioridades, chave e regras de gestão |
+| `backend/app/domain/common.py` | Create | Prioridade partilhada |
+| `backend/app/domain/projects.py` | Create | Estados, chave e regras de gestão |
 | `backend/app/schemas/projects.py` | Create | DTOs de projetos e membros |
 | `backend/app/schemas/common.py` | Create | Paginação genérica |
 | `backend/app/schemas/auth.py` | Modify | `UserSummary` |
@@ -158,7 +161,7 @@ IDs inválidos (não `ObjectId`) → 404. Todas as mutações passam pelo `verif
 | `frontend/src/services/apiClient.ts` | Modify | Erros de validação por campo |
 | `frontend/src/hooks/usePermissions.ts` | Create | Verificação de permissões na UI |
 | `frontend/src/components/ui/*.tsx` | Create | Componentes shadcn |
-| `frontend/src/features/projects/*.tsx`, `useProjects.ts` | Create | Lista, formulário, detalhe e membros |
+| `frontend/src/features/projects/*.tsx`, `useProjects.ts` | Create | Lista, formulário, layout com separadores, resumo e membros |
 | `frontend/src/app/router.tsx` | Modify | Rotas de projetos |
 | `frontend/src/app/layout/AppLayout.tsx` | Modify | Navegação |
 | `backend/README.md`, `frontend/README.md` | Modify | Documentação |

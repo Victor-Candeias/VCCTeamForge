@@ -17,9 +17,9 @@ status: active
 | ID | Title | Status | Created | Owner | Priority | Completed | Template | Blocked By | Spec |
 |---|---|---|---|---|---|---|---|---|---|
 | DEV-009 | CRUD de projetos e associação de membros | backlog | 2026-10-20 | developer | high |  |  | fase-1-fundacao/DEV-006 | [DEV-009](../specs/fase-2-projetos-issues/dev-009-spec.md) |
-| DEV-010 | CRUD de issues com numeração atómica | backlog | 2026-10-20 | developer | high |  |  | DEV-009 |  |
-| DEV-011 | Filtros, paginação e ordenação | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 |  |
-| DEV-012 | Comentários, histórico e auditoria | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 |  |
-| DEV-013 | Anexos e controlo de acesso | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 |  |
-| DEV-014 | Backlog e quadro Kanban | backlog | 2026-10-20 | developer | high |  |  | DEV-011 |  |
+| DEV-010 | CRUD de issues com numeração atómica | backlog | 2026-10-20 | developer | high |  |  | DEV-009 | [DEV-010](../specs/fase-2-projetos-issues/dev-010-spec.md) |
+| DEV-011 | Filtros, paginação e ordenação | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 | [DEV-011](../specs/fase-2-projetos-issues/dev-011-spec.md) |
+| DEV-012 | Comentários, histórico e auditoria | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 | [DEV-012](../specs/fase-2-projetos-issues/dev-012-spec.md) |
+| DEV-013 | Anexos e controlo de acesso | backlog | 2026-10-20 | developer | medium |  |  | DEV-010 | [DEV-013](../specs/fase-2-projetos-issues/dev-013-spec.md) |
+| DEV-014 | Backlog e quadro Kanban | backlog | 2026-10-20 | developer | high |  |  | DEV-011 | [DEV-014](../specs/fase-2-projetos-issues/dev-014-spec.md) |
 <!-- /maestru:work-items-list -->

@@ -12,6 +12,9 @@ dependencies = [
     "fastapi>=0.153,<0.154",
     "uvicorn>=0.54,<0.55",
     "pydantic-settings>=2.16,<3",
+    # PyMongo 4.18+ exige MongoDB >= 4.4; versões futuras podem deixar de suportar 4.4.
+    # Só subir após correr tests/test_mongo_compat.py contra o servidor real.
+    "pymongo>=4.19,<4.20",
 ]
 
 [project.optional-dependencies]

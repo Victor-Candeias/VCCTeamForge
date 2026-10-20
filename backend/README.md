@@ -61,6 +61,40 @@ Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais rea
 Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais MongoDB ou se
 `ATTACHMENTS_PATH` for relativo.
 
+## MongoDB 4.4
+
+- Driver: **PyMongo 4.19.x**, que suporta MongoDB ≥ 4.4. As versões 4.18+ deixaram de suportar a
+  4.2, e versões futuras podem deixar de suportar a 4.4. Só atualizar depois de os testes de
+  compatibilidade passarem contra o servidor real.
+- `app/repositories/mongo.py` cria o cliente (`tz_aware=True`, UTC) e verifica a versão do
+  servidor no arranque. Uma versão abaixo de 4.4 é rejeitada. Se o servidor estiver indisponível,
+  a API arranca na mesma.
+- Sem transações multi-documento e sem operadores posteriores à 4.4 (`$setWindowFields`,
+  `$dateTrunc`, `$getField`, time-series).
+- Números sequenciais com `CounterRepository.next_value()` (`$inc` atómico em `counters`).
+
+### Testes de integração
+
+Os testes que precisam de MongoDB usam uma base de dados descartável
+(`VCCTeamForgeDB_test_<aleatório>`), apagada no fim. Se o servidor não estiver acessível ou
+não autorizar o acesso, esses testes são ignorados (*skip*).
+
+| Variável | Omissão |
+|---|---|
+| `VCCTF_TEST_MONGODB_HOST` / `_PORT` | `127.0.0.1` / `27017` |
+| `VCCTF_TEST_MONGODB_USERNAME` / `_PASSWORD` / `_AUTH_SOURCE` | — |
+| `VCCTF_TEST_MONGODB_DATABASE` | aleatório |
+| `VCCTF_REQUIRE_MONGO=1` | falhar em vez de ignorar |
+
+Exemplo com uma instância 4.4 temporária, sem autenticação e isolada da de produção:
+
+```bash
+mkdir -p /tmp/mongo-test
+LD_LIBRARY_PATH=/opt/mongodb44/lib /opt/mongodb44/bin/mongod \
+  --dbpath /tmp/mongo-test --port 27027 --bind_ip 127.0.0.1 --wiredTigerCacheSizeGB 0.25 &
+VCCTF_REQUIRE_MONGO=1 VCCTF_TEST_MONGODB_PORT=27027 .venv/bin/pytest
+```
+
 ## Dependências
 
 - Limites de versão em `pyproject.toml`.

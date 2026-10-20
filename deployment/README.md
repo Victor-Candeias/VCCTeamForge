@@ -100,6 +100,30 @@ sudo deployment/scripts/deploy.sh
 | Anexos órfãos ou em falta no disco | `sudo vccteamforge-manage attachments-check` |
 | Logs do Nginx | `/var/log/nginx/vccteamforge.{access,error}.log` (com `rid=` igual ao `X-Request-ID`) |
 
+## Deploy local sem root (`deploy-local.sh`)
+
+Alternativa para uma máquina sem Nginx nem acesso root: publica backend + frontend em `/opt/vccteamforge` e gere-os como serviços `systemd --user`.
+
+```bash
+sudo install -d -o "$USER" /opt/vccteamforge   # só na primeira vez
+deployment/scripts/deploy-local.sh
+sudo loginctl enable-linger "$USER"              # opcional: arrancar no boot e sobreviver ao logout
+sudo ufw allow from 192.168.1.0/24 to any port 5175 proto tcp   # se o ufw estiver ativo (ajustar a sub-rede)
+```
+
+O script copia o código, atualiza o venv e o `node_modules` (só quando `requirements.txt`/`package-lock.json` mudam), compila o frontend (troca o `dist` apenas se o build tiver sucesso), aplica migrations e seeds e reinicia os dois serviços, esperando pelo readiness de cada um.
+
+| Componente | Serviço | Escuta |
+|---|---|---|
+| API | `vccteamforge-api.service` | `127.0.0.1:5100` |
+| Frontend (`vite preview`, proxy de `/api` para a API) | `vccteamforge-web.service` | `0.0.0.0:5175` (acessível na LAN) |
+
+- Configuração em `/opt/vccteamforge/config/api.env` (`0600`), criada na primeira execução a partir de `env/api.env.example`, com as credenciais `MONGODB_*` do `.env` da raiz do repositório e `COOKIE_SECURE=false` (HTTP). Não é sobrescrita depois.
+- Anexos em `/opt/vccteamforge/data/attachments`.
+- Variáveis opcionais: `VCCTF_DEPLOY_ROOT`, `VCCTF_API_PORT` (só na criação do `api.env`), `VCCTF_WEB_PORT`, `VCCTF_ALLOWED_HOSTS` (nomes aceites pelo frontend além de IPs e `localhost`; por omissão o nome da máquina).
+- Operação: `systemctl --user status vccteamforge-api vccteamforge-web`, `journalctl --user -u vccteamforge-api -u vccteamforge-web -f`; CLI: `cd /opt/vccteamforge/backend && VCCTF_ENV_FILE=/opt/vccteamforge/config/api.env ../venv/bin/python -m app.cli status`.
+- Sem Nginx não há TLS nem os cabeçalhos de segurança do snippet; usar apenas numa rede de confiança.
+
 ## Notas de segurança
 
 - A unidade systemd corre sem privilégios, com o sistema de ficheiros só de leitura (`ProtectSystem=strict`) exceto `/var/lib/VCCTeamForge`, filtro de syscalls, `MemoryDenyWriteExecute` e limite de 512 MiB (`systemd-analyze security` ≈ 1.2).

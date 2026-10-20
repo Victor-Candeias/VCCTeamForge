@@ -185,6 +185,25 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
 - Labels normalizadas (minúsculas, sem duplicados, ≤ 20 × 40 caracteres); story points entre
   0 e 100 em múltiplos de 0,5; responsável tem de ser membro do projeto.
 
+### Comentários, histórico e auditoria
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/issues/{id}/comments` | `issues:read` + acesso | Paginado, mais antigos primeiro; removidos aparecem sem `body` (`deleted=true`) |
+| `POST /api/issues/{id}/comments` | `issues:comment` + acesso | `body` Markdown, 1–10 000 caracteres; projeto arquivado → 422 |
+| `PATCH /api/issues/{id}/comments/{commentId}` | `issues:comment`, só o autor | Define `editedAt` |
+| `DELETE /api/issues/{id}/comments/{commentId}` | autor, Tech Lead do projeto ou admin | Remoção lógica (`deletedAt`, `deletedBy`, corpo apagado) → 204 |
+| `GET /api/issues/{id}/history` | `issues:read` + acesso | Eventos paginados, mais recentes primeiro |
+| `GET /api/audit-logs` | `audit:read` (admin) | Filtros `entityType`, `entityId`, `actorId`, `action`, `from`, `to` (datas, `to` inclusivo) |
+
+- Cada comentário devolve `canEdit`/`canDelete` calculados no servidor.
+- `issue_history` regista `created`, `updated` (lista `changes` com `field`/`from`/`to`),
+  `comment_added/edited/deleted` e `attachment_added/removed`. Descrição e critérios só
+  registam que mudaram (sem conteúdo).
+- As mesmas ações são gravadas em `audit_logs` (`issue.created`, `issue.updated`,
+  `comment.created/updated/deleted`). Falhas ao escrever histórico ou auditoria são registadas
+  em log (com `requestId`) e não anulam a operação principal.
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash

@@ -44,6 +44,7 @@ export function useIssueCacheUpdate() {
     queryClient.setQueryData(issueKeys.detail(issue.key), issue)
     void queryClient.invalidateQueries({ queryKey: ['issues', 'list'] })
     void queryClient.invalidateQueries({ queryKey: ['issues', 'labels'] })
+    void queryClient.invalidateQueries({ queryKey: ['issues', 'history', issue.id] })
   }
 }
 

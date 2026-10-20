@@ -2,6 +2,7 @@ import { createBrowserRouter, type RouteObject } from 'react-router'
 
 import { AppLayout } from '@/app/layout/AppLayout'
 import { NotFoundPage } from '@/app/NotFoundPage'
+import { AuditLogPage } from '@/features/admin/AuditLogPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
@@ -39,6 +40,7 @@ export const routes: RouteObject[] = [
           },
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },
           { path: 'issues/:issueKey/edit', element: <IssueEditPage /> },
+          { path: 'admin/audit', element: <AuditLogPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

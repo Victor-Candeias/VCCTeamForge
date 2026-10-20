@@ -74,6 +74,14 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - `src/components/Markdown.tsx` usa `react-markdown` sem HTML bruto (`skipHtml`); links abrem
   em novo separador com `rel="noopener noreferrer"`.
 - Mutações enviam `version`; um 409 mostra o aviso de edição concorrente.
+- O detalhe tem os separadores "Comentários" (Markdown, edição pelo autor, remoção em dois
+  passos, formulário só com `issues:comment`) e "Histórico" (alterações em texto legível;
+  descrição/critérios só indicam que mudaram).
+
+## Auditoria
+
+`/admin/audit` (entrada "Auditoria" no menu só com `audit:read`): tabela paginada com filtros
+por ação, entidade e intervalo de datas.
 
 Novos componentes shadcn: `npx shadcn@latest add <componente>` — confirmar que os imports
 usam `@/lib/utils` e que os ficheiros ficam em `src/components/ui`.

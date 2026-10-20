@@ -35,3 +35,15 @@ class AuditLogRepository(MongoRepository):
                 "createdAt": now,
             }
         )
+
+    def search(self, query: dict[str, Any], *, skip: int, limit: int) -> list[dict[str, Any]]:
+        cursor = (
+            self.collection.find(query)
+            .sort([("createdAt", -1), ("_id", -1)])
+            .skip(skip)
+            .limit(limit)
+        )
+        return list(cursor)
+
+    def count(self, query: dict[str, Any]) -> int:
+        return self.collection.count_documents(query)

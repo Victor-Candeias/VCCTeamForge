@@ -75,7 +75,7 @@ Comentários em issues, histórico consultável de alterações e auditoria das 
 | Create | `frontend/src/services/{comments,audit}.ts` | Cliente |
 | Create | `frontend/src/features/issues/comments.test.tsx` | Comentar, editar, remover, histórico |
 
-- [ ] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
+- [x] `pytest`, `ruff`, `npm run typecheck && npm run lint && npm test` passam
 
 ## Impacted Files
 

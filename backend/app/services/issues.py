@@ -1,4 +1,4 @@
-"""Criação, pesquisa e edição de issues (DEV-010, DEV-011)."""
+"""Criação, pesquisa e edição de issues (DEV-010, DEV-011, DEV-012)."""
 
 import re
 from collections.abc import Iterable
@@ -39,7 +39,8 @@ from app.services.authorization import (
     can_access_project,
     ensure_project_access,
 )
-from app.services.common import date_to_datetime, datetime_to_date, jsonable, object_id_or_422
+from app.services.common import date_to_datetime, datetime_to_date, object_id_or_422
+from app.services.issue_history import HistoryEvent, IssueActivityRecorder, diff_issue
 
 # Campos cujas alterações são reportadas (histórico/auditoria).
 TRACKED_FIELDS = (
@@ -95,6 +96,7 @@ class IssueService:
         self.projects = ProjectRepository(db)
         self.users = UserRepository(db)
         self.counters = CounterRepository(db)
+        self.activity = IssueActivityRecorder(db)
 
     # Leitura -------------------------------------------------------------------------------
 
@@ -219,6 +221,14 @@ class IssueService:
         }
         # Se o insert falhar depois de reservar o número fica um intervalo na numeração (aceite).
         issue = self.issues.create(document)
+        self.activity.record(
+            user,
+            issue,
+            HistoryEvent.CREATED,
+            now=now,
+            audit_action="issue.created",
+            details={"type": issue["type"], "title": title},
+        )
         return self.to_issue(user, issue, project)
 
     def update(self, user: User, issue_id: ObjectId, data: IssueUpdate) -> Issue:
@@ -232,30 +242,36 @@ class IssueService:
         issue: dict[str, Any],
         project: dict[str, Any],
         data: IssueUpdate,
-    ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-        """Valida e grava a alteração; devolve a issue atualizada e o diff dos campos alterados."""
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        """Valida e grava a alteração (com histórico e auditoria); devolve a issue e o diff."""
         if not can_edit_issue(user, issue):
             raise ForbiddenError("Só pode editar issues atribuídas a si ou que reportou")
         self._ensure_not_archived(project)
         changes = self._collect_changes(project, issue, data)
-        diff = {
-            field: {"from": jsonable(issue.get(field)), "to": jsonable(value)}
-            for field, value in changes.items()
-            if field in TRACKED_FIELDS and issue.get(field) != value
-        }
+        diff = diff_issue(issue, changes, TRACKED_FIELDS)
         if not diff:
             self._check_version(issue, data.version)
-            return issue, {}
+            return issue, []
         now = datetime.now(UTC)
-        if "blocked" in diff:
+        changed = {entry["field"] for entry in diff}
+        if "blocked" in changed:
             changes["blockedAt"] = now if changes["blocked"] else None
-        if "status" in diff:
+        if "status" in changed:
             done = changes["status"] == IssueStatus.DONE
             changes["completedAt"] = now if done else None
-        updated = self.issues.update_versioned(
-            issue["_id"], data.version, now=now, set_fields=changes
+        updated = self.require_updated(
+            self.issues.update_versioned(issue["_id"], data.version, now=now, set_fields=changes),
+            issue["_id"],
         )
-        return self.require_updated(updated, issue["_id"]), diff
+        self.activity.record(
+            user,
+            updated,
+            HistoryEvent.UPDATED,
+            now=now,
+            audit_action="issue.updated",
+            changes=diff,
+        )
+        return updated, diff
 
     # Conversão -----------------------------------------------------------------------------
 

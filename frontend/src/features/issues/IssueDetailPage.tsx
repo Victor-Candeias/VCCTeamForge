@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { BlockedBadge, IssueStatusBadge, IssueTypeBadge } from '@/features/issues/IssueBadges'
+import { IssueComments } from '@/features/issues/IssueComments'
+import { IssueHistory } from '@/features/issues/IssueHistory'
 import { useIssue, useUpdateIssue } from '@/features/issues/useIssues'
 import { PriorityBadge } from '@/features/projects/ProjectBadges'
 import { mutationErrorMessage } from '@/lib/errors'
@@ -65,6 +67,47 @@ function BlockControls({ issue }: { issue: Issue }) {
         </Button>
       </div>
     </form>
+  )
+}
+
+type ActivityTab = 'comments' | 'history'
+
+function IssueActivity({ issue }: { issue: Issue }) {
+  const [tab, setTab] = useState<ActivityTab>('comments')
+  const tabs: [ActivityTab, string][] = [
+    ['comments', 'Comentários'],
+    ['history', 'Histórico'],
+  ]
+  return (
+    <section className="space-y-3">
+      <div role="tablist" aria-label="Atividade" className="flex gap-1 border-b">
+        {tabs.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            id={`tab-${value}`}
+            aria-selected={tab === value}
+            aria-controls={`panel-${value}`}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+              tab === value
+                ? 'border-primary font-medium'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setTab(value)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        {tab === 'comments' ? (
+          <IssueComments issueId={issue.id} />
+        ) : (
+          <IssueHistory issueId={issue.id} projectId={issue.projectId} />
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -195,6 +238,7 @@ export function IssueDetailPage() {
               </ul>
             </section>
           )}
+          <IssueActivity issue={data} />
         </div>
         <dl className="grid h-fit grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
           {details.map(([label, value]) => (

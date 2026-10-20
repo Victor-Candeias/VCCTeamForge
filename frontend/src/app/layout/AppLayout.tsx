@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import { useCurrentUser, useLogout } from '@/features/auth/useAuth'
+import { usePermission } from '@/hooks/usePermissions'
 import { cn } from '@/lib/utils'
 import { roleLabels } from '@/services/auth'
 
@@ -10,9 +11,13 @@ const navigation = [
   { to: '/projects', label: 'Projetos', end: false },
 ]
 
+const auditNavigation = { to: '/admin/audit', label: 'Auditoria', end: false }
+
 export function AppLayout() {
   const { data: user } = useCurrentUser()
   const logout = useLogout()
+  const canReadAudit = usePermission('audit:read')
+  const items = canReadAudit ? [...navigation, auditNavigation] : navigation
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -20,7 +25,7 @@ export function AppLayout() {
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">
           <span className="font-semibold">VCCTeamForge</span>
           <nav className="flex gap-4 text-sm">
-            {navigation.map((item) => (
+            {items.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

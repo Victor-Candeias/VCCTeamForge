@@ -11,6 +11,7 @@ import {
   renderRoutes,
   techLeadUser,
   testProject,
+  testUser,
 } from '@/test/utils'
 
 const members = {
@@ -192,5 +193,175 @@ describe('detalhe da issue', () => {
     expect(await screen.findByRole('heading', { name: 'Login com SSO' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Bloquear' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Editar' })).not.toBeInTheDocument()
+  })
+})
+
+function testComment(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'c1',
+    issueId: 'i1',
+    author: { id: 'tl1', name: 'Tiago', email: 'tiago@exemplo.pt', role: 'tech_lead' },
+    body: 'Primeiro **comentário**',
+    deleted: false,
+    createdAt: '2026-01-03T10:00:00Z',
+    editedAt: null,
+    deletedAt: null,
+    canEdit: true,
+    canDelete: true,
+    ...overrides,
+  }
+}
+
+const commentsKey = 'GET /api/issues/i1/comments?page=1&pageSize=50'
+
+describe('comentários e histórico', () => {
+  it('cria, edita e remove comentários', async () => {
+    let comments = [testComment()]
+    const bodies: unknown[] = []
+    mockApi({
+      ...csrfHandler,
+      'GET /api/users/me': () => jsonResponse(techLeadUser),
+      'GET /api/issues/by-key/APP-1': () => jsonResponse(testIssue()),
+      [commentsKey]: () => jsonResponse(pageOf(comments, 1, 50)),
+      'POST /api/issues/i1/comments': (init) => {
+        bodies.push(JSON.parse(String(init.body)))
+        const created = testComment({ id: 'c2', body: 'Novo texto' })
+        comments = [...comments, created]
+        return jsonResponse(created, 201)
+      },
+      'PATCH /api/issues/i1/comments/c1': (init) => {
+        bodies.push(JSON.parse(String(init.body)))
+        comments = [testComment({ body: 'Texto editado', editedAt: '2026-01-04T10:00:00Z' }), comments[1]]
+        return jsonResponse(comments[0])
+      },
+      'DELETE /api/issues/i1/comments/c2': () => {
+        comments = [comments[0], testComment({ id: 'c2', body: null, deleted: true })]
+        return new Response(null, { status: 204 })
+      },
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/issues/APP-1')
+
+    expect(await screen.findByText('comentário')).toHaveProperty('tagName', 'STRONG')
+
+    await user.type(screen.getByLabelText('Novo comentário (Markdown)'), 'Novo texto')
+    await user.click(screen.getByRole('button', { name: 'Comentar' }))
+    expect(await screen.findByText('Novo texto')).toBeInTheDocument()
+    expect(screen.getByLabelText('Novo comentário (Markdown)')).toHaveValue('')
+
+    await user.click(screen.getAllByRole('button', { name: 'Editar' })[0])
+    const editor = screen.getByLabelText('Editar comentário')
+    await user.clear(editor)
+    await user.type(editor, 'Texto editado')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Texto editado')).toBeInTheDocument()
+    expect(screen.getByText('(editado)')).toBeInTheDocument()
+
+    await user.click(screen.getAllByRole('button', { name: 'Remover' })[1])
+    await user.click(screen.getByRole('button', { name: 'Confirmar remoção' }))
+    expect(await screen.findByText('Comentário removido')).toBeInTheDocument()
+    expect(bodies).toEqual([{ body: 'Novo texto' }, { body: 'Texto editado' }])
+  })
+
+  it('esconde o formulário sem permissão de comentar', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(testUser),
+      'GET /api/issues/by-key/APP-1': () => jsonResponse(testIssue({ canEdit: false })),
+      [commentsKey]: () =>
+        jsonResponse(pageOf([testComment({ canEdit: false, canDelete: false })], 1, 50)),
+    })
+    renderRoutes(routes, '/issues/APP-1')
+
+    expect(await screen.findByText('comentário')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Novo comentário (Markdown)')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Remover' })).not.toBeInTheDocument()
+  })
+
+  it('mostra o histórico em linguagem legível', async () => {
+    mockApi({
+      'GET /api/users/me': () => jsonResponse(techLeadUser),
+      'GET /api/issues/by-key/APP-1': () => jsonResponse(testIssue()),
+      'GET /api/projects/p1/members': () => jsonResponse(members),
+      [commentsKey]: () => jsonResponse(pageOf([], 1, 50)),
+      'GET /api/issues/i1/history?page=1&pageSize=25': () =>
+        jsonResponse(
+          pageOf([
+            {
+              id: 'h2',
+              type: 'updated',
+              actor: { id: 'tl1', name: 'Tiago', email: 'tiago@exemplo.pt', role: 'tech_lead' },
+              changes: [
+                { field: 'status', from: 'todo', to: 'in_progress' },
+                { field: 'assigneeId', from: null, to: 'tl1' },
+                { field: 'description', from: null, to: null },
+              ],
+              details: {},
+              createdAt: '2026-01-02T10:00:00Z',
+            },
+            {
+              id: 'h1',
+              type: 'created',
+              actor: { id: 'tl1', name: 'Tiago', email: 'tiago@exemplo.pt', role: 'tech_lead' },
+              changes: [],
+              details: {},
+              createdAt: '2026-01-01T10:00:00Z',
+            },
+          ]),
+        ),
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/issues/APP-1')
+
+    await user.click(await screen.findByRole('tab', { name: 'Histórico' }))
+
+    const statusLine = await screen.findByText(/alterou Estado de/)
+    expect(statusLine).toHaveTextContent('alterou Estado de To Do para Em progresso')
+    expect(await screen.findByText(/alterou Responsável de/)).toHaveTextContent(
+      'alterou Responsável de — para Tiago',
+    )
+    expect(screen.getByText('alterou Descrição')).toBeInTheDocument()
+    expect(screen.getByText('criou a issue')).toBeInTheDocument()
+  })
+})
+
+describe('auditoria', () => {
+  it('lista registos e filtra por ação', async () => {
+    const admin = { ...techLeadUser, role: 'admin' as const, permissions: ['audit:read'] }
+    const log = {
+      id: 'a1',
+      action: 'issue.updated',
+      actor: { id: 'tl1', name: 'Tiago', email: 'tiago@exemplo.pt', role: 'tech_lead' },
+      entityType: 'issue',
+      entityId: 'i1',
+      ip: null,
+      requestId: null,
+      details: { issueKey: 'APP-1', changes: [{ field: 'status', from: 'todo', to: 'done' }] },
+      createdAt: '2026-01-02T10:00:00Z',
+    }
+    const fetchMock = mockApi({
+      'GET /api/users/me': () => jsonResponse(admin),
+      'GET /api/audit-logs?page=1&pageSize=25': () => jsonResponse(pageOf([log])),
+      'GET /api/audit-logs?action=x&page=1&pageSize=25': () => jsonResponse(pageOf([])),
+    })
+    const user = userEvent.setup()
+    renderRoutes(routes, '/admin/audit')
+
+    expect(await screen.findByText('APP-1 · campos: status')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Auditoria' })).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Ação'), 'x')
+    expect(await screen.findByText('Sem registos.')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/audit-logs?action=x&page=1&pageSize=25',
+      expect.anything(),
+    )
+  })
+
+  it('nega acesso sem audit:read', async () => {
+    mockApi({ 'GET /api/users/me': () => jsonResponse(techLeadUser) })
+    renderRoutes(routes, '/admin/audit')
+
+    expect(await screen.findByText(/Não tem permissão/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Auditoria' })).not.toBeInTheDocument()
   })
 })

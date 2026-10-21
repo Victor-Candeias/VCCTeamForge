@@ -24,6 +24,7 @@ READY_TIMEOUT_SECONDS=60
 API_SERVICE=vccteamforge-api.service
 WEB_SERVICE=vccteamforge-web.service
 SNAPSHOT_UNIT=vccteamforge-report-snapshots
+BACKUP_UNIT=vccteamforge-backup
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -46,8 +47,9 @@ systemctl --user show-environment >/dev/null 2>&1 \
 [[ -d "$DEPLOY_ROOT" && -w "$DEPLOY_ROOT" ]] \
     || die "$DEPLOY_ROOT tem de existir e ter permissão de escrita (ex.: sudo install -d -o $(id -un) $DEPLOY_ROOT)."
 
-mkdir -p "$DEPLOY_ROOT"/{backend,database,frontend,config,data/attachments} "$STATE_DIR" "$UNIT_DIR"
-chmod 0700 "$DEPLOY_ROOT/config" "$DEPLOY_ROOT/data"
+mkdir -p "$DEPLOY_ROOT"/{backend,database,frontend,config,data/attachments,backups} \
+    "$STATE_DIR" "$UNIT_DIR"
+chmod 0700 "$DEPLOY_ROOT/config" "$DEPLOY_ROOT/data" "$DEPLOY_ROOT/backups"
 
 # Executa o comando se o hash dos ficheiros indicados mudou desde a última execução com sucesso.
 run_if_changed() {
@@ -103,6 +105,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
 else
     echo "A manter $ENV_FILE existente."
 fi
+# Também para configurações criadas antes de existirem backups.
+grep -q '^BACKUP_PATH=' "$ENV_FILE" || set_env_line "BACKUP_PATH=$DEPLOY_ROOT/backups"
 grep -q '^MONGODB_PASSWORD=ALTERAR$' "$ENV_FILE" \
     && die "definir as credenciais MongoDB em $ENV_FILE e voltar a executar."
 # A porta efetiva da API é a do ficheiro (pode ter sido alterada à mão).
@@ -205,9 +209,38 @@ RandomizedDelaySec=5min
 WantedBy=timers.target
 EOF
 
+cat >"$UNIT_DIR/$BACKUP_UNIT.service" <<EOF
+# Gerado por deployment/scripts/deploy-local.sh — não editar (é reescrito em cada deploy).
+[Unit]
+Description=VCCTeamForge backup diário (BD e anexos)
+
+[Service]
+Type=oneshot
+WorkingDirectory=$DEPLOY_ROOT/backend
+Environment=VCCTF_ENV_FILE=$ENV_FILE
+Environment=PYTHONUNBUFFERED=1
+ExecStart=$DEPLOY_ROOT/venv/bin/python -m app.cli backup
+UMask=0077
+Nice=10
+EOF
+
+cat >"$UNIT_DIR/$BACKUP_UNIT.timer" <<EOF
+# Gerado por deployment/scripts/deploy-local.sh — não editar (é reescrito em cada deploy).
+[Unit]
+Description=VCCTeamForge backup diário (timer)
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target
+EOF
+
 systemctl --user daemon-reload
 systemctl --user enable --quiet "$API_SERVICE" "$WEB_SERVICE"
-systemctl --user enable --now --quiet "$SNAPSHOT_UNIT.timer"
+systemctl --user enable --now --quiet "$SNAPSHOT_UNIT.timer" "$BACKUP_UNIT.timer"
 
 wait_for() {
     local url="$1" service="$2" deadline=$((SECONDS + READY_TIMEOUT_SECONDS))

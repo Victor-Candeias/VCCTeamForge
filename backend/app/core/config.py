@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     attachments_max_bytes: int = Field(default=20 * 1024 * 1024, ge=1, le=25 * 1024 * 1024)
     attachments_max_per_issue: int = Field(default=50, ge=1, le=1000)
 
+    # Backups da BD e dos anexos (python -m app.cli backup); só os mais recentes são mantidos.
+    backup_path: Path = Path("var/backups")
+    backup_retention: int = Field(default=14, ge=1, le=365)
+
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_format: Literal["text", "json"] = "text"
     log_file: Path | None = None
@@ -89,6 +93,8 @@ class Settings(BaseSettings):
             errors.append("MONGODB_USERNAME/MONGODB_PASSWORD são obrigatórios em produção")
         if not self.attachments_path.is_absolute():
             errors.append("ATTACHMENTS_PATH tem de ser um caminho absoluto em produção")
+        if not self.backup_path.is_absolute():
+            errors.append("BACKUP_PATH tem de ser um caminho absoluto em produção")
         if errors:
             raise ValueError("; ".join(errors))
 

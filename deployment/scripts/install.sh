@@ -8,9 +8,11 @@ APP_ROOT=/opt/VCCTeamForge
 CONFIG_DIR=/etc/VCCTeamForge
 WEB_ROOT=/var/www/VCCTeamForge
 STATE_DIR=/var/lib/VCCTeamForge
+BACKUP_DIR=/var/backups/VCCTeamForge
 SERVICE_USER=vccteamforge
 SERVICE_NAME=VCCTeamForge-api.service
 SNAPSHOT_UNIT=VCCTeamForge-report-snapshots
+BACKUP_UNIT=VCCTeamForge-backup
 
 DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -40,14 +42,16 @@ fi
 
 install -d -o root -g root -m 0755 "$APP_ROOT" "$WEB_ROOT"
 install -d -o root -g "$SERVICE_USER" -m 0750 "$CONFIG_DIR"
-install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$STATE_DIR" "$STATE_DIR/attachments"
+install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$STATE_DIR" "$STATE_DIR/attachments" \
+    "$BACKUP_DIR"
 
 if [[ ! -e "$CONFIG_DIR/api.env" ]]; then
     install -o root -g "$SERVICE_USER" -m 0640 "$DEPLOY_DIR/env/api.env.example" "$CONFIG_DIR/api.env"
     echo "ATENÇÃO: editar $CONFIG_DIR/api.env (credenciais MongoDB, COOKIE_SECURE) antes do deploy."
 fi
 
-for unit in "$SERVICE_NAME" "$SNAPSHOT_UNIT.service" "$SNAPSHOT_UNIT.timer"; do
+for unit in "$SERVICE_NAME" "$SNAPSHOT_UNIT.service" "$SNAPSHOT_UNIT.timer" \
+    "$BACKUP_UNIT.service" "$BACKUP_UNIT.timer"; do
     install -o root -g root -m 0644 "$DEPLOY_DIR/systemd/$unit" "/etc/systemd/system/$unit"
 done
 install -o root -g root -m 0755 "$DEPLOY_DIR/scripts/vccteamforge-manage" /usr/local/sbin/vccteamforge-manage
@@ -68,7 +72,7 @@ fi
 
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
-systemctl enable --now "$SNAPSHOT_UNIT.timer"
+systemctl enable --now "$SNAPSHOT_UNIT.timer" "$BACKUP_UNIT.timer"
 nginx -t
 
 echo "Instalação concluída. Próximos passos: editar $CONFIG_DIR/api.env e executar deploy.sh."

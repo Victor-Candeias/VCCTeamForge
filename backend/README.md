@@ -60,6 +60,8 @@ Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais rea
 | `ATTACHMENTS_PATH` | `var/attachments` | Absoluto em produção |
 | `ATTACHMENTS_MAX_BYTES` | `20971520` (20 MiB) | Por anexo; máximo 25 MiB (limite do Nginx) |
 | `ATTACHMENTS_MAX_PER_ISSUE` | `50` | Anexos ativos por issue |
+| `BACKUP_PATH` | `var/backups` | Destino dos backups; absoluto em produção |
+| `BACKUP_RETENTION` | `14` | Backups agendados mantidos (1–365) |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `LOG_FORMAT` | `text` | `json` recomendado em produção |
 | `LOG_FILE` | — | Se definido, ficheiro com rotação (`LOG_MAX_BYTES`, `LOG_BACKUP_COUNT`) |
@@ -73,7 +75,7 @@ Partir de `.env.example` (`cp .env.example .env`). Nunca colocar credenciais rea
 | `LOGIN_WINDOW_MINUTES` | `15` | Janela do rate limiting |
 
 Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais MongoDB ou se
-`ATTACHMENTS_PATH` for relativo.
+`ATTACHMENTS_PATH` ou `BACKUP_PATH` forem relativos.
 
 ## Logging, erros e health checks
 
@@ -485,6 +487,33 @@ que a API. O utilizador MongoDB precisa de `readWrite` na base de dados.
   comando falha; é preciso uma migration que remova o índice antes de o redefinir.
 - **Seeds** (`database/seed/<collection>.json`): cada documento tem `_id` e só é inserido se
   ainda não existir. Alterações feitas na Administração nunca são sobrepostas.
+
+## Backups, restauro e teste de carga
+
+```bash
+.venv/bin/python -m app.cli backup [--output DIR] [--keep N]   # BD + anexos em BACKUP_PATH
+.venv/bin/python -m app.cli backup-verify ARQUIVO.tar.gz        # verifica sem restaurar
+.venv/bin/python -m app.cli restore ARQUIVO.tar.gz --yes [--no-safety-backup]
+```
+
+- `app/maintenance/backup.py` não precisa do `mongodump`. Cada collection vai para o
+  `.tar.gz` em BSON (`db/<nome>.bson`), juntamente com as opções e os índices; os anexos vão
+  para `attachments/<storageKey>`. No fim, um `manifest.json` regista o SHA-256, o tamanho e o
+  número de documentos de cada membro. De `sessions`, `login_attempts` e `maintenance_locks`
+  guarda-se só a estrutura.
+- O arquivo é escrito em `.partial` (`0600`) e renomeado no fim. A retenção (`--keep`,
+  `BACKUP_RETENTION`) só conta os backups agendados.
+- O `restore` exige `--yes` e a API parada. Valida o arquivo todo (checksums, nomes dos membros,
+  contagens) e o espaço livre antes de alterar dados. Depois cria o backup de segurança
+  `vccteamforge-pre-restore-*` e repõe cada collection (drop, opções, documentos, índices),
+  removendo as que não estão no backup. Os anexos só são trocados no fim. O `status` mostra o
+  último backup.
+- `tools/loadtest.py`: teste de carga só com a biblioteca padrão (password em
+  `VCCTF_LOADTEST_PASSWORD`; `--help` mostra as opções). Utilização e medições em
+  `deployment/README.md`.
+- `tests/test_security.py` percorre todas as rotas do OpenAPI. Confirma que as privadas
+  devolvem 401 sem sessão e que as escritas devolvem 403 sem CSRF ou com um CSRF forjado. Uma
+  rota pública nova tem de ser acrescentada explicitamente ao teste.
 
 ## MongoDB 4.4
 

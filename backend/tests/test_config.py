@@ -12,6 +12,7 @@ PRODUCTION = {
     "mongodb_username": "app",
     "mongodb_password": "secret",
     "attachments_path": Path("/var/lib/vccteamforge/attachments"),
+    "backup_path": Path("/var/backups/vccteamforge"),
 }
 
 
@@ -54,13 +55,14 @@ def test_username_requires_password() -> None:
         Settings(mongodb_username="u")
 
 
-def test_production_requires_credentials_and_absolute_attachments_path() -> None:
+def test_production_requires_credentials_and_absolute_paths() -> None:
     with pytest.raises(ValidationError) as error:
         Settings(app_env="production", attachments_path=Path("relative"))
 
     message = str(error.value)
     assert "MONGODB_USERNAME" in message
     assert "ATTACHMENTS_PATH" in message
+    assert "BACKUP_PATH" in message
 
 
 @pytest.mark.parametrize(

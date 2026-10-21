@@ -8,6 +8,9 @@ Uso (a partir de ``backend/``)::
     python -m app.cli create-user --email admin@exemplo.pt --name "Admin" [--role admin]
     python -m app.cli attachments-check # ficheiros órfãos e anexos sem ficheiro
     python -m app.cli report-snapshots  # snapshot diário dos KPIs de cada projeto
+    python -m app.cli backup [--output DIR] [--keep N]   # BD + anexos num .tar.gz
+    python -m app.cli backup-verify ARQUIVO              # verifica sem restaurar
+    python -m app.cli restore ARQUIVO --yes              # substitui a BD e os anexos
 
 A password do ``create-user`` é pedida no terminal ou lida de ``VCCTF_NEW_USER_PASSWORD``
 (nunca como argumento, para não ficar no histórico da shell).
@@ -19,7 +22,10 @@ import argparse
 import getpass
 import os
 import sys
+import time
 from collections.abc import Sequence
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import TextIO
 
 from pymongo import MongoClient
@@ -28,7 +34,7 @@ from pymongo.errors import PyMongoError
 
 from app.core.config import Settings, get_settings
 from app.domain.permissions import Role
-from app.maintenance import indexes, migrations, seeds
+from app.maintenance import backup, indexes, migrations, seeds
 from app.repositories import mongo
 from app.repositories.attachments import AttachmentRepository
 from app.repositories.users import EmailAlreadyExistsError
@@ -65,6 +71,14 @@ def _status(db: Database, settings: Settings, out: _Output) -> int:
     out(f"Índices: {len(plan) - len(missing)}/{len(plan)} presentes")
     for spec in missing:
         out(f"  em falta: {spec.collection}.{spec.name}")
+    backups = backup.list_backups(settings.backup_path)
+    if backups:
+        age = datetime.now(UTC).timestamp() - backups[-1].stat().st_mtime
+        out(
+            f"Último backup: {backups[-1].name} (há {age / 3600:.1f} h; {len(backups)} guardado(s))"
+        )
+    else:
+        out(f"Último backup: nenhum em {settings.backup_path}")
     return 0
 
 
@@ -111,6 +125,69 @@ def _report_snapshots(db: Database, out: _Output) -> int:
     saved, failed = ReportSnapshotService(db).capture_all()
     out(f"Snapshots de relatório: {saved} gravado(s), {failed} com erro.")
     return 1 if failed else 0
+
+
+def _size(size: int) -> str:
+    return f"{size / (1024 * 1024):.1f} MiB"
+
+
+def _backup(db: Database, settings: Settings, args: argparse.Namespace, out: _Output) -> int:
+    output = args.output or settings.backup_path
+    keep = args.keep or settings.backup_retention
+    started = time.monotonic()
+    result = backup.create_backup(db, settings.attachments_path, output)
+    removed = backup.prune_backups(output, keep)
+    out(
+        f"Backup criado: {result.path} ({_size(result.size)}) — "
+        f"{result.collections} collection(s), {result.documents} documento(s), "
+        f"{result.attachments} anexo(s) "
+        f"({_size(result.attachment_bytes)}) em {time.monotonic() - started:.1f} s"
+    )
+    for path in removed:
+        out(f"  removido (retenção de {keep}): {path.name}")
+    return 0
+
+
+def _backup_verify(archive: Path, out: _Output) -> int:
+    started = time.monotonic()
+    verified = backup.verify_backup(archive)
+    manifest = verified.manifest
+    out(
+        f"Backup válido: {archive.name} — criado em {verified.created_at:%Y-%m-%d %H:%M:%S} UTC "
+        f"(base de dados {manifest['database']}, MongoDB {manifest['mongodbVersion']})"
+    )
+    for collection in verified.collections:
+        out(f"  {collection['name']}: {collection['documents']} documento(s)")
+    out(
+        f"Total: {verified.documents} documento(s), {verified.attachments} anexo(s) "
+        f"({_size(manifest['attachments']['bytes'])}); verificado em "
+        f"{time.monotonic() - started:.1f} s"
+    )
+    return 0
+
+
+def _restore(db: Database, settings: Settings, args: argparse.Namespace, out: _Output) -> int:
+    if not args.yes:
+        raise ValueError(
+            "O restauro substitui toda a base de dados e os anexos. Pare a API e os timers "
+            "(ver deployment/README.md) e repita com --yes."
+        )
+    started = time.monotonic()
+    result = backup.restore_backup(
+        db,
+        settings.attachments_path,
+        args.archive,
+        safety_backup_dir=None if args.no_safety_backup else settings.backup_path,
+        progress=out,
+    )
+    for name in result.dropped:
+        out(f"  removida (não existe no backup): {name}")
+    out(
+        f"Restauro concluído: {result.collections} collection(s), {result.documents} "
+        f"documento(s), {result.attachments} anexo(s) em {time.monotonic() - started:.1f} s. "
+        "As sessões foram terminadas; correr 'migrate' se o backup for de uma versão anterior."
+    )
+    return 0
 
 
 def _attachments_check(db: Database, settings: Settings, out: _Output) -> int:
@@ -177,6 +254,21 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser(
         "report-snapshots", help="Grava o snapshot diário de métricas de cada projeto"
     )
+    backup_parser = commands.add_parser("backup", help="Backup da BD e dos anexos (.tar.gz)")
+    backup_parser.add_argument("--output", type=Path, help="Diretoria (por omissão BACKUP_PATH)")
+    backup_parser.add_argument(
+        "--keep", type=int, help="Backups a manter (por omissão BACKUP_RETENTION)"
+    )
+    verify = commands.add_parser("backup-verify", help="Verifica um backup sem restaurar")
+    verify.add_argument("archive", type=Path)
+    restore = commands.add_parser("restore", help="Substitui a BD e os anexos por um backup")
+    restore.add_argument("archive", type=Path)
+    restore.add_argument("--yes", action="store_true", help="Confirma a substituição dos dados")
+    restore.add_argument(
+        "--no-safety-backup",
+        action="store_true",
+        help="Não guarda um backup do estado atual antes de restaurar",
+    )
     return parser
 
 
@@ -192,6 +284,15 @@ def main(
     out = _Output(stdout or sys.stdout)
     err = _Output(stderr or sys.stderr)
     settings = settings or get_settings()
+    if args.command == "backup-verify":
+        try:
+            return _backup_verify(args.archive, out)
+        except (backup.BackupError, OSError) as error:
+            err(f"Erro: {error}")
+            return 1
+    if args.command == "backup" and args.keep is not None and args.keep < 1:
+        err("Erro: --keep tem de ser pelo menos 1")
+        return 2
     owns_client = client is None
     client = client or mongo.create_client(settings)
     try:
@@ -208,11 +309,16 @@ def main(
             return _attachments_check(db, settings, out)
         if args.command == "report-snapshots":
             return _report_snapshots(db, out)
+        if args.command == "backup":
+            return _backup(db, settings, args, out)
+        if args.command == "restore":
+            return _restore(db, settings, args, out)
         return _seed(db, settings, out)
     except (
         migrations.MigrationError,
         indexes.IndexConflictError,
         mongo.IncompatibleServerError,
+        backup.BackupError,
         ValueError,
         OSError,
         PyMongoError,

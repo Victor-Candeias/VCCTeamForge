@@ -1,0 +1,56 @@
+# VCCTeamForge — backup diário da base de dados e dos anexos (python -m app.cli backup).
+# Instalar em /etc/systemd/system/ (deployment/scripts/install.sh); disparado por
+# VCCTeamForge-backup.timer. Os arquivos ficam em BACKUP_PATH (/var/backups/VCCTeamForge),
+# com retenção BACKUP_RETENTION; a cópia para outro dispositivo está no deployment/README.md.
+
+[Unit]
+Description=VCCTeamForge backup diário (BD e anexos)
+Documentation=file:///opt/VCCTeamForge/deployment/README.md
+After=network-online.target mongodb44.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=vccteamforge
+Group=vccteamforge
+WorkingDirectory=/opt/VCCTeamForge/backend
+Environment=VCCTF_ENV_FILE=/etc/VCCTeamForge/api.env
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/VCCTeamForge/venv/bin/python -m app.cli backup
+TimeoutStartSec=2h
+UMask=0077
+Nice=10
+IOSchedulingClass=idle
+
+MemoryHigh=256M
+MemoryMax=384M
+TasksMax=32
+
+# Hardening (igual à API); só escreve na diretoria dos backups e lê os anexos.
+ReadWritePaths=/var/backups/VCCTeamForge
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallErrorNumber=EPERM

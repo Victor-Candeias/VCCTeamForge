@@ -1,0 +1,14 @@
+# Corre VCCTeamForge-backup.service todos os dias às 02:30 (hora local, fora do horário de
+# utilização: sem replica set o backup não é um instantâneo atómico) e recupera a execução
+# perdida se a máquina estiver desligada à hora marcada.
+
+[Unit]
+Description=VCCTeamForge backup diário (timer)
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

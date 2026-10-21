@@ -72,6 +72,9 @@ secrets.json
 dump/
 mongodb-backup/
 mongo-backup/
+backend/var/backups/
+vccteamforge-backup-*.tar.gz*
+vccteamforge-pre-restore-*.tar.gz*
 *.bson
 *.metadata.json
 

@@ -27,7 +27,7 @@ SNAPSHOT_UNIT=vccteamforge-report-snapshots
 BACKUP_UNIT=vccteamforge-backup
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 ENV_FILE="$DEPLOY_ROOT/config/api.env"
 STATE_DIR="$DEPLOY_ROOT/.deploy-state"
 

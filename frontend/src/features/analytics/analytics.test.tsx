@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { routes } from '@/app/router'
 import {
@@ -305,5 +305,50 @@ describe('Métricas do projeto', () => {
     )
     const nav = screen.getByRole('navigation', { name: /projeto/i })
     expect(within(nav).getByRole('link', { name: 'Métricas' })).toBeInTheDocument()
+  })
+
+  it('exporta as métricas com os filtros ativos', async () => {
+    const createObjectURL = vi.fn(() => 'blob:export')
+    // O jsdom não implementa object URLs.
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() })
+    const downloads: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloads.push(this.download)
+    })
+    const fetchMock = mockApi({
+      'GET /api/users/me': () => jsonResponse(devUser),
+      'GET /api/projects/p1': () => jsonResponse(testProject({ canManage: false })),
+      'GET /api/reports/projects/p1/metrics': () => jsonResponse(metrics()),
+      'GET /api/reports/projects/p1/metrics?type=bug': () => jsonResponse(metrics()),
+      'GET /api/reports/export?projectId=p1&format=xlsx&type=bug': () =>
+        new Response('xlsx', {
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': 'attachment; filename="vccteamforge-APP-metricas.xlsx"',
+          },
+        }),
+      'GET /api/reports/export?projectId=p1&format=pdf&type=bug': () =>
+        jsonResponse({ title: 'Erro', detail: 'A exportação está limitada a 5000 issues' }, 422),
+    })
+    renderRoutes(routes, '/projects/p1/metrics')
+
+    const user = userEvent.setup()
+    await screen.findByText('Issue antiga')
+    await user.selectOptions(screen.getByLabelText('Tipo de issue'), 'bug')
+    await user.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
+
+    await waitFor(() => expect(downloads).toEqual(['vccteamforge-APP-metricas.xlsx']))
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/reports/export?projectId=p1&format=xlsx&type=bug',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
+    expect(await screen.findByText('A exportação está limitada a 5000 issues')).toBeInTheDocument()
+    expect(downloads).toHaveLength(1)
+    click.mockRestore()
   })
 })

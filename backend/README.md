@@ -433,6 +433,29 @@ As listas devolvem apenas os campos de resumo (sem descrição, critérios nem d
   `deployment/systemd/`; projetos arquivados ignorados; código de saída 1 se algum falhar) ou
   manualmente pelo gestor do projeto. A migration `0009_report_snapshots` cria a collection.
 
+### Exportações
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/reports/export?projectId=&format=` | `reports:read` + acesso | `format` `csv`, `xlsx` ou `pdf`; filtros `sprintId`, `type`, `from`, `to` iguais às métricas (mesmas validações → 422) |
+
+- Resposta `Content-Disposition: attachment` com
+  `vccteamforge-<CHAVE>-metricas-<AAAA-MM-DD>.<formato>`, `Cache-Control: no-store` e `nosniff`.
+- Issues exportadas: as do filtro (`sprintId`, `type`) ativas no período, ou seja, criadas até
+  `to` e por concluir ou concluídas desde `from`, ordenadas pelo número. Geração síncrona,
+  limitada a 5000 issues → 422 a pedir para filtrar (`EXPORT_MAX_ISSUES`).
+- **CSV:** detalhe das issues no formato do Excel pt-PT (UTF-8 com BOM, separador `;`, decimais
+  com vírgula, datas em UTC).
+- **XLSX:** folha "Resumo" (contexto, filtros e KPIs), "Issues" (detalhe, com filtros
+  automáticos) e uma folha por tabela de métricas (estados, fluxo, velocity, aging, mais antigas,
+  bugs por severidade, QA, carga de trabalho e releases).
+- **PDF:** A4 com contexto, KPIs, gráficos de barras (distribuição por estado e velocity) e as
+  mesmas tabelas. Usa as fontes base do PDF (Latin-1): caracteres fora desse conjunto, como
+  emojis, aparecem como `?`.
+- Texto começado por `=`, `+`, `-`, `@`, tab ou CR leva o prefixo `'` no CSV; no XLSX as
+  células são gravadas sempre como texto (sem fórmulas).
+- Cada exportação fica na auditoria (`report.exported`, com formato, filtros e número de issues).
+
 Primeiro administrador (a password é pedida no terminal):
 
 ```bash
@@ -502,3 +525,5 @@ VCCTF_REQUIRE_MONGO=1 VCCTF_TEST_MONGODB_PORT=27027 .venv/bin/pytest
 - Limites de versão em `pyproject.toml`.
 - Versões exatas de runtime em `requirements.txt`, geradas com `scripts/lock-requirements.sh`.
 - Em produção instalar apenas `requirements.txt` e o pacote (`pip install --no-deps .`).
+- Exportações: `openpyxl` (XLSX) e `fpdf2` (PDF, puro Python; traz `Pillow`, `fonttools` e
+  `defusedxml`). Ambas com wheels para Linux, sem bibliotecas de sistema.

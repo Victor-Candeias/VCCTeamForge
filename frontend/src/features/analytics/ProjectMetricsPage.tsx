@@ -17,10 +17,20 @@ import {
 import { StatusChart, TrendChart, VelocityChart } from '@/features/analytics/AnalyticsCharts'
 import { IssueTable, Kpi, KpiGrid, Section, StatusBars } from '@/features/analytics/AnalyticsShared'
 import { formatDays, formatNumber, formatPercent, formatRate } from '@/features/analytics/format'
-import { useCreateReportSnapshot, useProjectMetrics } from '@/features/analytics/useAnalytics'
+import {
+  useCreateReportSnapshot,
+  useExportReport,
+  useProjectMetrics,
+} from '@/features/analytics/useAnalytics'
 import { useProjectContext } from '@/features/projects/projectContext'
 import { ReleaseStatusBadge } from '@/features/releases/ReleaseShared'
-import type { DurationMetric, MetricsParams, ProjectMetrics } from '@/services/analytics'
+import {
+  exportFormatLabels,
+  type DurationMetric,
+  type ExportFormat,
+  type MetricsParams,
+  type ProjectMetrics,
+} from '@/services/analytics'
 import { ApiError } from '@/services/apiClient'
 import { formatDate, formatDateTime, priorityLabels } from '@/services/common'
 import { issueTypeLabels, issueTypes, type IssueType } from '@/services/issues'
@@ -267,6 +277,7 @@ export function ProjectMetricsPage() {
   const [params, setParams] = useState<MetricsParams>({})
   const metrics = useProjectMetrics(project.id, params)
   const snapshot = useCreateReportSnapshot(project.id)
+  const exporter = useExportReport(project.id)
   const canSnapshot = project.canManage && project.status !== 'archived'
 
   const invalid =
@@ -284,12 +295,47 @@ export function ProjectMetricsPage() {
             </p>
           )}
         </div>
-        {canSnapshot && (
-          <Button variant="outline" disabled={snapshot.isPending} onClick={() => snapshot.mutate()}>
-            Gravar snapshot de hoje
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Exportar métricas" className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground">Exportar:</span>
+            {(Object.keys(exportFormatLabels) as ExportFormat[]).map((format) => (
+              <Button
+                key={format}
+                variant="outline"
+                size="sm"
+                disabled={exporter.isPending}
+                aria-label={`Exportar ${exportFormatLabels[format]}`}
+                onClick={() => exporter.mutate({ format, params })}
+              >
+                {exportFormatLabels[format]}
+              </Button>
+            ))}
+          </div>
+          {canSnapshot && (
+            <Button
+              variant="outline"
+              disabled={snapshot.isPending}
+              onClick={() => snapshot.mutate()}
+            >
+              Gravar snapshot de hoje
+            </Button>
+          )}
+        </div>
       </div>
+      {exporter.isPending && (
+        <p className="text-sm text-muted-foreground" role="status">
+          A gerar a exportação…
+        </p>
+      )}
+      {exporter.isError && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {exporter.error instanceof ApiError
+              ? exporter.error.message
+              : 'Não foi possível exportar as métricas.'}
+          </AlertDescription>
+        </Alert>
+      )}
       {snapshot.isSuccess && (
         <Alert>
           <AlertDescription>Snapshot de hoje gravado.</AlertDescription>

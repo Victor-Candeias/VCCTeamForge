@@ -17,5 +17,5 @@ status: active
 | ID | Title | Status | Created | Owner | Priority | Completed | Template | Blocked By | Spec |
 |---|---|---|---|---|---|---|---|---|---|
 | DEV-023 | Analytics e snapshots | done | 2026-10-20 | developer | medium | 2026-10-20 |  | fase-3-scrum/DEV-019 | [DEV-023](../specs/fase-5-analytics/dev-023-spec.md) |
-| DEV-024 | Exportação CSV/XLSX/PDF | backlog | 2026-10-20 | developer | low |  |  | DEV-023 |  |
+| DEV-024 | Exportação CSV/XLSX/PDF | done | 2026-10-20 | developer | low | 2026-10-21 |  | DEV-023 | [DEV-024](../specs/fase-5-analytics/dev-024-spec.md) |
 <!-- /maestru:work-items-list -->

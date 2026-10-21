@@ -83,6 +83,36 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   return (await response.json()) as T
 }
 
+export type DownloadedFile = { blob: Blob; filename: string }
+
+/** Nome do ficheiro em `Content-Disposition: attachment; filename="..."`. */
+function attachmentFilename(header: string | null): string | undefined {
+  const match = header?.match(/filename="([^"]+)"/)
+  return match?.[1]
+}
+
+/** GET de um ficheiro (ex.: exportações); erros chegam como `ApiError`, tal como em `apiFetch`. */
+export async function apiDownload(path: string): Promise<DownloadedFile> {
+  const response = await fetch(`${API_BASE}${path}`, { credentials: 'same-origin' })
+  if (!response.ok) {
+    throw await toApiError(response)
+  }
+  const filename = attachmentFilename(response.headers.get('Content-Disposition')) ?? 'download'
+  return { blob: await response.blob(), filename }
+}
+
+/** Guarda o ficheiro no computador através de um link temporário. */
+export function saveDownloadedFile({ blob, filename }: DownloadedFile) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.append(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
 async function toApiError(response: Response): Promise<ApiError> {
   try {
     const { title, detail, ...extensions } = (await response.json()) as {

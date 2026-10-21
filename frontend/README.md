@@ -168,6 +168,9 @@ O alvo do proxy pode ser alterado com `VITE_DEV_API_TARGET`.
 - "Gravar snapshot de hoje" só aparece a quem gere o projeto (`canManage`) e com o projeto ativo;
   os snapshots diários são normalmente gravados pelo timer do servidor.
 - Formatadores em `src/features/analytics/format.ts` (números e percentagens em `pt-PT`).
+- Botões "Exportar" CSV/XLSX/PDF nas métricas: `GET /api/reports/export` com os filtros ativos,
+  via `apiDownload` (erros como `ApiError`, mostrados na página) e `saveDownloadedFile` em
+  `services/apiClient.ts`.
 
 
 `/admin/audit` (entrada "Auditoria" no menu só com `audit:read`): tabela paginada com filtros

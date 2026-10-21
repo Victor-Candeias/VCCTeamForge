@@ -1,4 +1,4 @@
-import { apiFetch, toQueryString } from '@/services/apiClient'
+import { apiDownload, apiFetch, toQueryString } from '@/services/apiClient'
 import type { Priority, UserSummary } from '@/services/common'
 import type { IssueStatus, IssueType } from '@/services/issues'
 import type { ReleaseStatus } from '@/services/releases'
@@ -141,6 +141,14 @@ export type MetricsParams = {
   to?: string
 }
 
+export type ExportFormat = 'csv' | 'xlsx' | 'pdf'
+
+export const exportFormatLabels: Record<ExportFormat, string> = {
+  csv: 'CSV',
+  xlsx: 'XLSX',
+  pdf: 'PDF',
+}
+
 export type ReportSnapshot = {
   projectId: string
   day: string
@@ -159,4 +167,8 @@ export function getProjectMetrics(projectId: string, params: MetricsParams = {})
 
 export function createReportSnapshot(projectId: string) {
   return apiFetch<ReportSnapshot>(`/reports/projects/${projectId}/snapshots`, { method: 'POST' })
+}
+
+export function exportReport(projectId: string, format: ExportFormat, params: MetricsParams = {}) {
+  return apiDownload(`/reports/export${toQueryString({ projectId, format, ...params })}`)
 }

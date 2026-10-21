@@ -2,10 +2,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import {
   createReportSnapshot,
+  exportReport,
   getDashboardOverview,
   getProjectMetrics,
+  type ExportFormat,
   type MetricsParams,
 } from '@/services/analytics'
+import { saveDownloadedFile } from '@/services/apiClient'
 
 export const analyticsKeys = {
   all: ['analytics'] as const,
@@ -38,5 +41,13 @@ export function useCreateReportSnapshot(projectId: string) {
   return useMutation({
     mutationFn: () => createReportSnapshot(projectId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: analyticsKeys.all }),
+  })
+}
+
+export function useExportReport(projectId: string) {
+  return useMutation({
+    mutationFn: ({ format, params }: { format: ExportFormat; params: MetricsParams }) =>
+      exportReport(projectId, format, params),
+    onSuccess: saveDownloadedFile,
   })
 }

@@ -11,13 +11,19 @@ const navigation = [
   { to: '/projects', label: 'Projetos', end: false },
 ]
 
+const usersNavigation = { to: '/admin/users', label: 'Utilizadores', end: false }
 const auditNavigation = { to: '/admin/audit', label: 'Auditoria', end: false }
 
 export function AppLayout() {
   const { data: user } = useCurrentUser()
   const logout = useLogout()
+  const canManageUsers = usePermission('users:manage')
   const canReadAudit = usePermission('audit:read')
-  const items = canReadAudit ? [...navigation, auditNavigation] : navigation
+  const items = [
+    ...navigation,
+    ...(canManageUsers ? [usersNavigation] : []),
+    ...(canReadAudit ? [auditNavigation] : []),
+  ]
 
   return (
     <div className="min-h-svh bg-background text-foreground">

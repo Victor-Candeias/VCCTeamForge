@@ -112,9 +112,9 @@ Em `APP_ENV=production` a aplicação recusa arrancar se faltarem credenciais Mo
 - **Rate limiting:** as falhas de login por email e por IP ficam em `login_attempts` (TTL 24h).
   Acima do limite a API devolve 429 com `Retry-After`. Credenciais erradas e utilizador
   inexistente dão a mesma resposta, e o tempo de resposta também é igual.
-- **Auditoria** (`audit_logs`): `auth.login`, `auth.login_failed`, `auth.logout`, `user.created`
-  e `project.*` (created, updated, archived, restored, member_added, member_removed), com IP e
-  request id.
+- **Auditoria** (`audit_logs`): `auth.login`, `auth.login_failed`, `auth.logout`, `user.*`
+  (created, updated, password_reset) e `project.*` (created, updated, archived, restored,
+  member_added, member_removed), com IP e request id.
 - **RBAC:** os perfis `admin`, `tech_lead`, `developer` e `qa` são mapeados para permissões em
   `app/domain/permissions.py`. Nas rotas usa-se `Depends(require_permissions(Permission.X))`.
   Para dados de um projeto, os serviços usam `app/services/authorization.py`: só administradores
@@ -150,6 +150,24 @@ Convenções comuns:
 
 O responsável (`leadUserId`) tem de ser um utilizador ativo com perfil Tech Lead ou
 Administrador. Projetos arquivados ficam só de leitura e saem das listas por omissão.
+
+### Utilizadores (Administração)
+
+| Método e rota | Permissão | Notas |
+|---------------|-----------|-------|
+| `GET /api/admin/users` | `users:manage` | Inclui desativados; filtros `q` (nome/email), `role` e `status` (repetíveis); `sort` `name`/`email`/`createdAt`/`lastLoginAt`; paginado |
+| `POST /api/admin/users` | `users:manage` | `{email, name, role, password}` → 201; email duplicado → 409 (`field=email`); auditoria `user.created` |
+| `GET /api/admin/users/{id}` | `users:manage` | Inclui `status`, `lastLoginAt`, `passwordChangedAt` e `version` |
+| `PATCH /api/admin/users/{id}` | `users:manage` | `{version, name?, email?, role?, status?}`; auditoria `user.updated` com as alterações |
+| `POST /api/admin/users/{id}/password` | `users:manage` | `{version, password}`; auditoria `user.password_reset` |
+
+- Os utilizadores não se apagam: desativam-se (`status=disabled`) para preservar o histórico.
+  Desativar termina todas as sessões do utilizador.
+- Um administrador não pode alterar o próprio perfil nem desativar a própria conta (422), para
+  ficar sempre pelo menos um administrador ativo.
+- Redefinir a password termina as sessões do utilizador. Se for a própria conta, mantém a
+  sessão atual. As passwords nunca são devolvidas nem registadas.
+- A CLI `python -m app.cli create-user` continua disponível para criar o primeiro administrador.
 
 ### Issues
 

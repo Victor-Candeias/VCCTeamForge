@@ -3,6 +3,8 @@ import { createBrowserRouter, type RouteObject } from 'react-router'
 import { AppLayout } from '@/app/layout/AppLayout'
 import { NotFoundPage } from '@/app/NotFoundPage'
 import { AuditLogPage } from '@/features/admin/AuditLogPage'
+import { UserCreatePage, UserEditPage } from '@/features/admin/UserForm'
+import { UsersPage } from '@/features/admin/UsersPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
@@ -92,6 +94,9 @@ export const routes: RouteObject[] = [
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },
           { path: 'issues/:issueKey/edit', element: <IssueEditPage /> },
           { path: 'admin/audit', element: <AuditLogPage /> },
+          { path: 'admin/users', element: <UsersPage /> },
+          { path: 'admin/users/new', element: <UserCreatePage /> },
+          { path: 'admin/users/:userId', element: <UserEditPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

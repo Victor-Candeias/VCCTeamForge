@@ -17,4 +17,6 @@ status: active
 | ID | Title | Status | Created | Owner | Priority | Completed | Template | Spec |
 |---|---|---|---|---|---|---|---|---|
 | DEV-027 | Fluxo de estados das issues sem saltos | done | 2026-10-21 | developer | medium | 2026-10-21 |  |  |
+| DEV-028 | Gestão de utilizadores na aplicação | done | 2026-10-21 | developer | high | 2026-10-21 |  | [DEV-028](../specs/fase-7-evolucao/dev-028-spec.md) |
+| DEV-029 | Aspeto visual mais profissional do site | backlog | 2026-10-21 | developer | medium |  |  |  |
 <!-- /maestru:work-items-list -->

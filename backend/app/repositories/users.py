@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from bson import ObjectId
+from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 from app.domain.permissions import Role
@@ -42,6 +43,15 @@ class UserRepository(MongoRepository):
             ]
         return list(self.collection.find(query, _PUBLIC_PROJECTION).sort("name", 1).limit(limit))
 
+    def search(
+        self, query: dict[str, Any], *, sort: list[tuple[str, int]], skip: int, limit: int
+    ) -> list[dict[str, Any]]:
+        cursor = self.collection.find(query, _PUBLIC_PROJECTION).sort(sort).skip(skip)
+        return list(cursor.limit(limit))
+
+    def count(self, query: dict[str, Any]) -> int:
+        return self.collection.count_documents(query)
+
     def create(
         self, *, email: str, name: str, role: Role, password_hash: str, now: datetime
     ) -> dict[str, Any]:
@@ -71,3 +81,25 @@ class UserRepository(MongoRepository):
         if new_password_hash:
             changes["passwordHash"] = new_password_hash
         self.collection.update_one({"_id": user_id}, {"$set": changes})
+
+    def update_versioned(
+        self, user_id: ObjectId, version: int, *, now: datetime, set_fields: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Aplica a alteração só se ``version`` coincidir (controlo otimista).
+
+        Devolve o documento atualizado ou ``None`` se não existir ou a versão divergir. Lança
+        ``EmailAlreadyExistsError`` se o novo email já estiver em uso.
+        """
+        changes = dict(set_fields)
+        if "email" in changes:
+            changes["email"] = changes["email"].strip()
+            changes["normalizedEmail"] = normalize_email(changes["email"])
+        try:
+            return self.collection.find_one_and_update(
+                {"_id": user_id, "version": version},
+                {"$set": {**changes, "updatedAt": now}, "$inc": {"version": 1}},
+                projection=_PUBLIC_PROJECTION,
+                return_document=ReturnDocument.AFTER,
+            )
+        except DuplicateKeyError as error:
+            raise EmailAlreadyExistsError(changes.get("email", "")) from error

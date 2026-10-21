@@ -52,5 +52,10 @@ class SessionRepository(MongoRepository):
     def delete(self, session_id: ObjectId) -> None:
         self.collection.delete_one({"_id": session_id})
 
-    def delete_for_user(self, user_id: ObjectId) -> int:
-        return self.collection.delete_many({"userId": user_id}).deleted_count
+    def delete_for_user(
+        self, user_id: ObjectId, *, except_session_id: ObjectId | None = None
+    ) -> int:
+        query: dict[str, Any] = {"userId": user_id}
+        if except_session_id is not None:
+            query["_id"] = {"$ne": except_session_id}
+        return self.collection.delete_many(query).deleted_count

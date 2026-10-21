@@ -20,6 +20,7 @@ import type { StatusBreakdown, VelocityEntry } from '@/services/reports'
 const CHART_HEIGHT = 260
 const CHART_INITIAL_SIZE = { width: 600, height: CHART_HEIGHT }
 const MARGIN = { top: 8, right: 16, bottom: 8, left: 0 }
+const BAR_RADIUS: [number, number, number, number] = [4, 4, 0, 0]
 
 function tooltipNumber(value: unknown) {
   return formatNumber(typeof value === 'number' ? value : null)
@@ -38,15 +39,15 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
     <div className="h-[260px] w-full" aria-label="Gráfico de tendências" role="img">
       <ResponsiveContainer width="100%" height={CHART_HEIGHT} initialDimension={CHART_INITIAL_SIZE}>
         <LineChart data={data} margin={MARGIN}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
           <XAxis dataKey="label" />
           <YAxis allowDecimals={false} />
           <Tooltip formatter={tooltipNumber} />
           <Legend />
-          <Line name="Abertas" dataKey="openCount" stroke="var(--primary)" strokeWidth={2} />
+          <Line name="Abertas" dataKey="openCount" stroke="var(--chart-1)" strokeWidth={2} />
           <Line name="Em progresso" dataKey="inProgressCount" stroke="var(--chart-2)" />
-          <Line name="Bloqueadas" dataKey="blockedCount" stroke="#dc2626" />
-          <Line name="Concluídas" dataKey="doneCount" stroke="var(--chart-1)" />
+          <Line name="Bloqueadas" dataKey="blockedCount" stroke="var(--destructive)" />
+          <Line name="Concluídas" dataKey="doneCount" stroke="var(--chart-3)" />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -59,11 +60,11 @@ export function StatusChart({ breakdown }: { breakdown: StatusBreakdown[] }) {
     <div className="h-[260px] w-full" aria-label="Gráfico de distribuição por estado" role="img">
       <ResponsiveContainer width="100%" height={CHART_HEIGHT} initialDimension={CHART_INITIAL_SIZE}>
         <BarChart data={data} margin={MARGIN}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
           <XAxis dataKey="label" />
           <YAxis allowDecimals={false} />
           <Tooltip formatter={tooltipNumber} />
-          <Bar name="Issues" dataKey="issueCount" fill="var(--primary)" />
+          <Bar name="Issues" dataKey="issueCount" fill="var(--chart-1)" radius={BAR_RADIUS} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -75,13 +76,23 @@ export function VelocityChart({ entries }: { entries: VelocityEntry[] }) {
     <div className="h-[260px] w-full" aria-label="Gráfico de velocidade" role="img">
       <ResponsiveContainer width="100%" height={CHART_HEIGHT} initialDimension={CHART_INITIAL_SIZE}>
         <BarChart data={entries} margin={MARGIN}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
           <XAxis dataKey="name" />
           <YAxis allowDecimals={false} />
           <Tooltip formatter={tooltipNumber} />
           <Legend />
-          <Bar name="Compromisso" dataKey="committedStoryPoints" fill="var(--chart-1)" />
-          <Bar name="Concluído" dataKey="completedStoryPoints" fill="var(--primary)" />
+          <Bar
+            name="Compromisso"
+            dataKey="committedStoryPoints"
+            fill="var(--chart-2)"
+            radius={BAR_RADIUS}
+          />
+          <Bar
+            name="Concluído"
+            dataKey="completedStoryPoints"
+            fill="var(--chart-1)"
+            radius={BAR_RADIUS}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

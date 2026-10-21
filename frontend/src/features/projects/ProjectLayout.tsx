@@ -29,7 +29,7 @@ export function ProjectLayout() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
-          <p className="font-mono text-sm text-muted-foreground">{data.key}</p>
+          <p className="font-mono text-xs font-medium tracking-wide text-primary">{data.key}</p>
           <h1 className="text-2xl font-semibold">{data.name}</h1>
           <div className="flex gap-2">
             <ProjectStatusBadge status={data.status} />
@@ -88,8 +88,9 @@ export function ProjectLayout() {
               end={tab.end}
               className={({ isActive }) =>
                 cn(
-                  '-mb-px border-b-2 border-transparent px-3 py-2 text-muted-foreground hover:text-foreground',
-                  isActive && 'border-primary text-foreground',
+                  '-mb-px border-b-2 border-transparent px-3 py-2.5 font-medium',
+                  'text-muted-foreground transition-colors hover:text-foreground',
+                  isActive && 'border-primary text-primary hover:text-primary',
                 )
               }
             >

@@ -35,6 +35,7 @@ import type { SprintReport } from '@/services/reports'
 
 const CHART_HEIGHT = 280
 const CHART_INITIAL_SIZE = { width: 600, height: CHART_HEIGHT }
+const BAR_RADIUS: [number, number, number, number] = [4, 4, 0, 0]
 
 function formatPoints(value: number | null) {
   return value === null ? '—' : value.toLocaleString('pt-PT', { maximumFractionDigits: 1 })
@@ -108,7 +109,7 @@ function Burndown({ report }: { report: SprintReport }) {
           initialDimension={CHART_INITIAL_SIZE}
         >
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis dataKey="label" />
             <YAxis allowDecimals={false} />
             <Tooltip formatter={(value) => formatPoints(typeof value === 'number' ? value : null)} />
@@ -124,7 +125,7 @@ function Burndown({ report }: { report: SprintReport }) {
             <Line
               name="Âmbito"
               dataKey="scope"
-              stroke="#d97706"
+              stroke="var(--warning)"
               type="stepAfter"
               dot={false}
             />
@@ -215,13 +216,23 @@ function Velocity({ report }: { report: SprintReport }) {
           initialDimension={CHART_INITIAL_SIZE}
         >
               <BarChart data={report.velocity} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Bar name="Compromisso" dataKey="committedStoryPoints" fill="var(--chart-1)" />
-                <Bar name="Concluído" dataKey="completedStoryPoints" fill="var(--primary)" />
+                <Bar
+                  name="Compromisso"
+                  dataKey="committedStoryPoints"
+                  fill="var(--chart-2)"
+                  radius={BAR_RADIUS}
+                />
+                <Bar
+                  name="Concluído"
+                  dataKey="completedStoryPoints"
+                  fill="var(--chart-1)"
+                  radius={BAR_RADIUS}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>

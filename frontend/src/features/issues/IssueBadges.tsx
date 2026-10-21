@@ -6,10 +6,16 @@ import {
   type IssueType,
 } from '@/services/issues'
 
+const statusVariants = {
+  todo: 'secondary',
+  in_progress: 'info',
+  code_review: 'info',
+  testing: 'warning',
+  done: 'success',
+} as const satisfies Record<IssueStatus, string>
+
 export function IssueStatusBadge({ status }: { status: IssueStatus }) {
-  return (
-    <Badge variant={status === 'done' ? 'default' : 'secondary'}>{issueStatusLabels[status]}</Badge>
-  )
+  return <Badge variant={statusVariants[status]}>{issueStatusLabels[status]}</Badge>
 }
 
 export function IssueTypeBadge({ type }: { type: IssueType }) {

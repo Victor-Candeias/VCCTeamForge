@@ -55,9 +55,9 @@ export function TestPlanStatusBadge({ status }: { status: TestPlanStatus }) {
 }
 
 const resultStyles: Record<TestRunResult, string> = {
-  pass: 'border-transparent bg-emerald-600 text-white',
-  fail: 'border-transparent bg-red-600 text-white',
-  blocked: 'border-transparent bg-amber-500 text-white',
+  pass: 'border-transparent bg-success text-white',
+  fail: 'border-transparent bg-destructive text-white',
+  blocked: 'border-transparent bg-warning text-white',
   not_run: '',
   skipped: '',
 }

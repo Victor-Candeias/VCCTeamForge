@@ -27,7 +27,7 @@ import { userStatusLabels, type ManagedUser, type UserStatus } from '@/services/
 
 export function UserStatusBadge({ status }: { status: UserStatus }) {
   return (
-    <Badge variant={status === 'active' ? 'secondary' : 'destructive'}>
+    <Badge variant={status === 'active' ? 'success' : 'destructive'}>
       {userStatusLabels[status]}
     </Badge>
   )

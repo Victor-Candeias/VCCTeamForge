@@ -117,8 +117,8 @@ def test_epics_and_done_issues_are_not_plannable(lead_api, project, fields, stat
     issue = _issue(lead_api, project, **fields)
     if status == "done":
         url = f"/api/issues/{issue['id']}"
-        issue = lead_api.patch(url, json={"version": 1, "status": "in_progress"}).json()
-        lead_api.patch(url, json={"version": issue["version"], "status": "done"})
+        for target in ("in_progress", "code_review", "testing", "done"):
+            issue = lead_api.patch(url, json={"version": issue["version"], "status": target}).json()
 
     response = _add(lead_api, sprint, issue)
 

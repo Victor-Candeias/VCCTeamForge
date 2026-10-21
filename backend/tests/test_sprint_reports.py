@@ -74,8 +74,8 @@ def _patch(api, issue, **fields):
 
 
 def _finish(api, issue):
-    _patch(api, issue, status="in_progress")
-    _patch(api, issue, status="done")
+    for status in ("in_progress", "code_review", "testing", "done"):
+        _patch(api, issue, status=status)
 
 
 def _transition(api, sprint, action, **body):

@@ -40,10 +40,11 @@ def _issue(api, project, **overrides):
 
 def _finish(api, issue):
     url = f"/api/issues/{issue['id']}"
-    issue = api.patch(url, json={"version": issue["version"], "status": "in_progress"}).json()
-    response = api.patch(url, json={"version": issue["version"], "status": "done"})
-    assert response.status_code == 200, response.text
-    return response.json()
+    for status in ("in_progress", "code_review", "testing", "done"):
+        response = api.patch(url, json={"version": issue["version"], "status": status})
+        assert response.status_code == 200, response.text
+        issue = response.json()
+    return issue
 
 
 def _plan_with_case(api, project):

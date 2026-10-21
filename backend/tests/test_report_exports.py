@@ -52,17 +52,22 @@ def issues(apis, people, project, indexed_db):
         assert response.status_code == 200, response.text
         return response.json()
 
+    def finish(issue):
+        for status in ("in_progress", "code_review", "testing", "done"):
+            issue = patch(issue, status=status)
+        return issue
+
     first = create(title="Login", assigneeId=str(people["dev"].id), storyPoints=3)
     patch(first, status="in_progress")
     create(title='=HYPERLINK("http://x")', type="bug", priority="critical")
     old = create(title="Antiga")
-    old = patch(patch(old, status="in_progress"), status="done")
+    old = finish(old)
     indexed_db["issues"].update_one(
         {"_id": ObjectId(old["id"])},
         {"$set": {"completedAt": datetime.now(UTC) - timedelta(days=200)}},
     )
     done = create(title="Feita — com travessão")
-    patch(patch(done, status="in_progress"), status="done")
+    finish(done)
 
 
 def _export(api, project, export_format, **params):

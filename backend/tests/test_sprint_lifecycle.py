@@ -236,9 +236,10 @@ def test_sprint_board_shows_all_done_issues(lead_api, project, planned, indexed_
 def _finish(api, issue):
     url = f"/api/issues/{issue['id']}"
     current = api.get(url).json()
-    current = api.patch(url, json={"version": current["version"], "status": "in_progress"}).json()
-    response = api.patch(url, json={"version": current["version"], "status": "done"})
-    assert response.status_code == 200, response.text
+    for status in ("in_progress", "code_review", "testing", "done"):
+        response = api.patch(url, json={"version": current["version"], "status": status})
+        assert response.status_code == 200, response.text
+        current = response.json()
 
 
 def _close(api, sprint, **body):

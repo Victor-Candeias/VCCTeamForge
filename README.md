@@ -89,6 +89,7 @@ As permissões são verificadas no backend e também por projeto. Um utilizador 
 - Vistas: tabela, backlog e quadro.
 - Estados iniciais: `todo`, `in_progress`, `code_review`, `testing`, `done`.
 - Impedimento representado por `blocked` e `blockReason`, independente do estado.
+- Fluxo sem saltos: cada issue passa por todos os estados por ordem; recuos permitidos conforme §14 (questão 7).
 - Validar transições e alterações concorrentes no backend.
 
 ### 4.4 Sprints Scrum
@@ -483,14 +484,18 @@ Não usar commits, linhas de código ou story points individuais como indicadore
 
 ## 14. Questões a fechar antes da implementação
 
-1. Arquitetura CPU e versão exata do Linux.
-2. RAM disponível e tipo de disco.
-3. Versão exata do MongoDB 4.4 e configuração de autenticação.
-4. Número de projetos simultaneamente ativos.
-5. Volume previsto de issues, testes e anexos.
-6. Necessidade de HTTPS com DNS interno ou acesso por IP.
-7. Regras de transição das issues e definição formal de `Done`.
-8. Política de backups, retenção e restauro.
+| # | Questão | Resposta (21-10-2026) | Estado |
+|---|---|---|---|
+| 1 | Arquitetura CPU e versão exata do Linux | x86_64, Intel Atom x5-Z8350 @ 1,44 GHz (4 cores, 1 thread/core, sem AVX); Debian GNU/Linux 13.6 (trixie) | Fechada |
+| 2 | RAM disponível e tipo de disco | 1,9 GiB RAM (~1 GiB disponível) + 1,5 GiB swap; eMMC de 28,9 GB (`mmcblk1`, não rotacional) | Fechada |
+| 3 | Versão exata do MongoDB 4.4 e configuração de autenticação | MongoDB 4.4.29 (build `ubuntu2004`, x86_64, OpenSSL 1.1.1w); autenticação configurada no ficheiro `.env` (`MONGODB_USERNAME`, `MONGODB_PASSWORD`, `MONGODB_AUTH_SOURCE`), fora do Git | Fechada |
+| 4 | Número de projetos simultaneamente ativos | 6 por sprint | Fechada |
+| 5 | Volume previsto de issues, testes e anexos | 6 por sprint; anexos não são previstos, mas a funcionalidade deve existir | Fechada |
+| 6 | Necessidade de HTTPS com DNS interno ou acesso por IP | Acesso por IP, apenas na rede local, sem exposição à Internet (confirma §1) | Fechada |
+| 7 | Regras de transição das issues e definição formal de `Done` | Fluxo sem saltos: avançar apenas para o estado seguinte (`todo` → `in_progress` → `code_review` → `testing` → `done`); recuos permitidos `in_progress` → `todo`, `code_review` → `in_progress`, `testing` → `in_progress`/`code_review` e `done` → `in_progress` (reabrir). Aplicação com um único utilizador (gestor), que faz todas as alterações. `Done` sem pré-condições adicionais | Fechada |
+| 8 | Política de backups, retenção e restauro | Usar o standard: backup diário às 02:30, retenção dos 14 mais recentes, restauro via `vccteamforge-manage restore` (ver [`deployment/README.md`](deployment/README.md#backups-e-restauro)) | Fechada |
+
+**Implicações do hardware:** CPU sem AVX (explica a impossibilidade de MongoDB ≥ 5.0) e RAM muito limitada — considerar `APP_WORKERS=1` (o exemplo em `deployment/env/api.env.example` usa 2), limitar a cache do WiredTiger e geração de exportações com volumes pequenos. O eMMC tem escrita limitada: manter logs rotativos e a retenção de backups; a cópia para outro dispositivo é essencial.
 
 ## 15. Recomendação final
 

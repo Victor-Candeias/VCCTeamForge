@@ -54,7 +54,9 @@ def _patch(api, issue, **changes):
 
 
 def _finish(api, issue):
-    return _patch(api, _patch(api, issue, status="in_progress"), status="done")
+    for status in ("in_progress", "code_review", "testing", "done"):
+        issue = _patch(api, issue, status=status)
+    return issue
 
 
 def _set(db: Database, issue, **fields):

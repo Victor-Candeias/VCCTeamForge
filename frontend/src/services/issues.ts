@@ -27,8 +27,8 @@ export const issueStatuses = Object.keys(issueStatusLabels) as IssueStatus[]
 /** Transições permitidas (espelho do backend, que valida sempre). */
 export const issueTransitions: Record<IssueStatus, IssueStatus[]> = {
   todo: ['in_progress'],
-  in_progress: ['todo', 'code_review', 'testing', 'done'],
-  code_review: ['in_progress', 'testing', 'done'],
+  in_progress: ['todo', 'code_review'],
+  code_review: ['in_progress', 'testing'],
   testing: ['in_progress', 'code_review', 'done'],
   done: ['in_progress'],
 }

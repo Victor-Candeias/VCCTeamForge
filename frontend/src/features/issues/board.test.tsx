@@ -128,12 +128,12 @@ describe('quadro Kanban', () => {
     renderRoutes(routes, '/projects/p1/board')
 
     const progress = await screen.findByRole('region', { name: 'Em progresso' })
-    await user.selectOptions(within(progress).getByLabelText('Mover APP-1 para'), 'done')
+    await user.selectOptions(within(progress).getByLabelText('Mover APP-1 para'), 'code_review')
 
     expect(await screen.findByText('Transição inválida')).toBeInTheDocument()
     await waitFor(() => expect(within(progress).getByText('Tarefa 1')).toBeInTheDocument())
-    const done = screen.getByRole('region', { name: 'Concluída' })
-    expect(within(done).queryByText('Tarefa 1')).not.toBeInTheDocument()
+    const review = screen.getByRole('region', { name: 'Code review' })
+    expect(within(review).queryByText('Tarefa 1')).not.toBeInTheDocument()
   })
 
   it('não envia pedidos ao largar numa coluna com transição não permitida', async () => {

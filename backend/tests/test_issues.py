@@ -162,7 +162,12 @@ def test_status_transitions_and_completed_at(lead_api, project):
     assert invalid.json()["field"] == "status"
 
     issue = lead_api.patch(url, json={"version": 1, "status": "in_progress"}).json()
-    issue = lead_api.patch(url, json={"version": issue["version"], "status": "done"}).json()
+    skip = lead_api.patch(url, json={"version": issue["version"], "status": "done"})
+    assert skip.status_code == 422
+    assert issue["allowedTransitions"] == ["todo", "code_review"]
+
+    for status in ("code_review", "testing", "done"):
+        issue = lead_api.patch(url, json={"version": issue["version"], "status": status}).json()
     assert issue["status"] == "done"
     assert issue["completedAt"] is not None
     assert issue["allowedTransitions"] == ["in_progress"]

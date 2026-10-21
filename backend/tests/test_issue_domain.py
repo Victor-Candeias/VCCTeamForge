@@ -27,9 +27,10 @@ def _user(role: Role) -> User:
     [
         ("todo", "in_progress"),
         ("in_progress", "todo"),
-        ("in_progress", "done"),
+        ("in_progress", "code_review"),
         ("code_review", "testing"),
         ("testing", "code_review"),
+        ("testing", "done"),
         ("done", "in_progress"),
         ("todo", "todo"),
     ],
@@ -40,7 +41,15 @@ def test_valid_transitions(current, target):
 
 @pytest.mark.parametrize(
     ("current", "target"),
-    [("todo", "done"), ("todo", "code_review"), ("done", "todo"), ("code_review", "todo")],
+    [
+        ("todo", "done"),
+        ("todo", "code_review"),
+        ("done", "todo"),
+        ("code_review", "todo"),
+        ("in_progress", "testing"),
+        ("in_progress", "done"),
+        ("code_review", "done"),
+    ],
 )
 def test_invalid_transitions(current, target):
     with pytest.raises(IssueRuleError) as error:
@@ -52,8 +61,6 @@ def test_allowed_transitions_follow_workflow_order():
     assert allowed_transitions("in_progress") == [
         IssueStatus.TODO,
         IssueStatus.CODE_REVIEW,
-        IssueStatus.TESTING,
-        IssueStatus.DONE,
     ]
     assert STATUS_RANK[IssueStatus.TODO] == 1
     assert STATUS_RANK[IssueStatus.DONE] == 5

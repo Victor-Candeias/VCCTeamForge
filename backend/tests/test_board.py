@@ -159,11 +159,11 @@ def test_board_groups_by_status_in_rank_order(apis, project, three, indexed_db: 
     assert _set_status(apis["lead"], c, "in_progress").status_code == 200
     assert _move(apis["lead"], c, beforeId=b["id"]).status_code == 200
     old = _create(apis["lead"], project, "Antiga")
-    assert _set_status(apis["lead"], old, "in_progress").status_code == 200
-    assert _set_status(apis["lead"], old, "done").status_code == 200
+    for status in ("in_progress", "code_review", "testing", "done"):
+        assert _set_status(apis["lead"], old, status).status_code == 200
     recent = _create(apis["lead"], project, "Recente")
-    assert _set_status(apis["lead"], recent, "in_progress").status_code == 200
-    assert _set_status(apis["lead"], recent, "done").status_code == 200
+    for status in ("in_progress", "code_review", "testing", "done"):
+        assert _set_status(apis["lead"], recent, status).status_code == 200
     indexed_db.issues.update_one(
         {"_id": ObjectId(old["id"])},
         {"$set": {"completedAt": datetime.now(UTC) - timedelta(days=15)}},

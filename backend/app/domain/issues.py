@@ -39,12 +39,8 @@ class IssueStatus(StrEnum):
 
 ALLOWED_TRANSITIONS: dict[IssueStatus, frozenset[IssueStatus]] = {
     IssueStatus.TODO: frozenset({IssueStatus.IN_PROGRESS}),
-    IssueStatus.IN_PROGRESS: frozenset(
-        {IssueStatus.TODO, IssueStatus.CODE_REVIEW, IssueStatus.TESTING, IssueStatus.DONE}
-    ),
-    IssueStatus.CODE_REVIEW: frozenset(
-        {IssueStatus.IN_PROGRESS, IssueStatus.TESTING, IssueStatus.DONE}
-    ),
+    IssueStatus.IN_PROGRESS: frozenset({IssueStatus.TODO, IssueStatus.CODE_REVIEW}),
+    IssueStatus.CODE_REVIEW: frozenset({IssueStatus.IN_PROGRESS, IssueStatus.TESTING}),
     IssueStatus.TESTING: frozenset(
         {IssueStatus.IN_PROGRESS, IssueStatus.CODE_REVIEW, IssueStatus.DONE}
     ),

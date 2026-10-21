@@ -6,7 +6,8 @@ title: Fase 2 - Projetos e issues
 created: 2026-10-20
 description: "Projetos, membros, issues, comentários e histórico (M2)"
 owner: developer
-status: active
+status: archived
+completed: 2026-10-21
 ---
 
 # fase-2-projetos-issues: Fase 2 - Projetos e issues

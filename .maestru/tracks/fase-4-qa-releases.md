@@ -6,7 +6,8 @@ title: Fase 4 - QA e releases
 created: 2026-10-20
 description: "Casos, planos, execuções, bugs e releases (M4)"
 owner: developer
-status: active
+status: archived
+completed: 2026-10-21
 ---
 
 # fase-4-qa-releases: Fase 4 - QA e releases

@@ -6,7 +6,8 @@ title: Fase 5 - Analytics
 created: 2026-10-20
 description: "Reports, gráficos, CSV/XLSX/PDF (M5)"
 owner: developer
-status: active
+status: archived
+completed: 2026-10-21
 ---
 
 # fase-5-analytics: Fase 5 - Analytics

@@ -6,7 +6,8 @@ title: Fase 1 - Fundação
 created: 2026-10-20
 description: "Estrutura, autenticação, permissões, MongoDB 4.4 e Linux (M1)"
 owner: developer
-status: active
+status: archived
+completed: 2026-10-21
 ---
 
 # fase-1-fundacao: Fase 1 - Fundação

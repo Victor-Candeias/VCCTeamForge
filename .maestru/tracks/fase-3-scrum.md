@@ -6,7 +6,8 @@ title: Fase 3 - Scrum
 created: 2026-10-20
 description: "Backlog, sprints, quadro, snapshots e dashboard MVP (M3)"
 owner: developer
-status: active
+status: archived
+completed: 2026-10-21
 ---
 
 # fase-3-scrum: Fase 3 - Scrum

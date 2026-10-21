@@ -6,7 +6,8 @@ title: Fase 6 - Estabilização
 created: 2026-10-20
 description: "Testes, segurança, backups, documentação e produção (M6)"
 owner: developer
-status: active
+status: archived
+completed: 2026-10-21
 ---
 
 # fase-6-estabilizacao: Fase 6 - Estabilização
